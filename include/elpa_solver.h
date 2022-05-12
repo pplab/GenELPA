@@ -7,8 +7,6 @@ class ELPA_Solver
     ELPA_Solver(bool isReal, MPI_Comm comm, int nev, int narows, int nacols, int* desc);
     ELPA_Solver(bool isReal, MPI_Comm comm, int nev, int narows, int nacols, int* desc, int* otherParameter);
 
-    ~ELPA_Solver();
-
     int eigenvector(double* A, double* EigenValue, double* EigenVector);
     int generalized_eigenvector(double* A, double* B, int& DecomposedState,
                                 double* EigenValue, double* EigenVector);
@@ -24,6 +22,8 @@ class ELPA_Solver
 
     void verify(double* A, double* B, double* EigenValue, double* EigenVector,
                 double &maxRemain, double &meanRemain);
+
+    void exit();
 
     private:
     const int  CHOLESKY_CRITICAL_SIZE=1000;

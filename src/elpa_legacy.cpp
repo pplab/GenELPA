@@ -106,7 +106,7 @@ void ELPA_Solver::setKernel(int kernel, int useQR)
     this->useQR=useQR;
 }
 
-ELPA_Solver::~ELPA_Solver()
+void ELPA_Solver::exit()
 {
     delete[] dwork;
     delete[] zwork;
@@ -858,6 +858,55 @@ void ELPA_Solver::timer(int myid, const char function[], const char step[], doub
 // maxRemain: maximum absolute value of remains
 // meanRemain: mean absolute value of remains
 void ELPA_Solver::verify(double* A, double* EigenValue, double* EigenVector,
+                         double &maxError, double &meanError)
+{
+    double* V=EigenVector;
+    const int naloc=narows*nacols;
+    double* D=new double[naloc];
+    double* R=dwork;
+
+    for(int i=0; i<naloc; ++i)
+        D[i]=0;
+
+    for(int i=0; i<nFull; ++i)
+    {
+        int localRow, localCol;
+        int localProcRow, localProcCol;
+
+        localRow=localIndex(i, nblk, nprows, localProcRow);
+        if(myprow==localProcRow)
+        {
+            localCol=localIndex(i, nblk, npcols, localProcCol);
+            if(mypcol==localProcCol)
+            {
+                int idx = localRow + localCol*narows;
+                D[idx]=EigenValue[i];
+            }
+        }
+    }
+
+    // R=V*D
+    Cpdsymm('R', 'U', nFull, 1.0, D, V, 0.0, R, desc);
+    // R=A*V-V*D=A*V-R
+    Cpdsymm('L', 'U', nFull, 1.0, A, V, -1.0, R, desc);
+    // calculate the maximum and mean value of sum_i{R(:,i)*R(:,i)}
+    double sumError=0;
+    maxError=0;
+    for(int i=1; i<=nFull; ++i)
+    {
+        double E;
+        Cpddot(nFull, E, R, 1, i, 1,
+                         R, 1, i, 1, desc);
+        //printf("myid: %d, i: %d, E: %lf\n", myid, i, E);
+        sumError+=E;
+        maxError=maxError>E?maxError:E;
+    }
+    meanError=sumError/nFull;
+    // global mean and max Error
+    delete[] D;
+}
+/*
+void ELPA_Solver::verify(double* A, double* EigenValue, double* EigenVector,
                          double &maxRemain, double &meanRemain)
 {
     double* V=EigenVector;
@@ -923,7 +972,7 @@ void ELPA_Solver::verify(double* A, double* EigenValue, double* EigenVector,
     MPI_Allreduce(&R_max, &maxRemain, 1, MPI_DOUBLE, MPI_MAX, comm);
 
     delete[] D;
-}
+}*/
 
 // calculate remains of A*V - B*V*D
 // V: eigenvector matrix

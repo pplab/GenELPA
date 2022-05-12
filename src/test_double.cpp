@@ -260,7 +260,8 @@ int main(int argc, char** argv)
     delete[] a;
     delete[] b;
     delete[] q;
-    delete[] ev;
+    delete[] ev;    
+    es.exit();
     Cblacs_gridexit(my_blacs_ctxt);
     MPI_Finalize();
     return 0;

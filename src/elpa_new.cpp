@@ -152,7 +152,7 @@ void ELPA_Solver::setKernel(int kernel, int useQR)
     elpa_set_integer(handle_pool[handle_id], "qr", useQR, &error);
 }
 
-ELPA_Solver::~ELPA_Solver(void)
+void ELPA_Solver::exit()
 {
     delete[] dwork;
     delete[] zwork;
