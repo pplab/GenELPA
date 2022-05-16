@@ -8,6 +8,7 @@ extern "C"
     #include "pblas.h"
     #include "scalapack.h"
 }
+#include <complex>
 
 static inline void Cdcopy(const int n, double* a, double* b)
 {
@@ -37,6 +38,15 @@ static inline int Cpdpotrf(const char uplo, const int na, double* U, int* desc)
     return info;
 }
 
+static inline int Cpzpotrf(const char uplo, const int na, std::complex<double>* U, int* desc)
+{
+    int isrc=1;
+    int info;
+    double _Complex* uu=reinterpret_cast<double _Complex*> (U);
+    pzpotrf_(&uplo, &na, uu, &isrc, &isrc, desc, &info);
+    return info;
+}
+
 static inline void Cpdtrmm(char side, char uplo, char trans, char diag,
                           int na, double alpha, double* a, double* b, int* desc)
 {
@@ -46,26 +56,52 @@ static inline void Cpdtrmm(char side, char uplo, char trans, char diag,
                     b, &isrc, &isrc, desc);
 }
 
+static inline void Cpztrmm(char side, char uplo, char trans, char diag,
+                          int na, double alpha, std::complex<double>* a, 
+                          std::complex<double>* b, int* desc)
+{
+    int isrc=1;
+    double _Complex* aa=reinterpret_cast<double _Complex*> (a);
+    double _Complex* bb=reinterpret_cast<double _Complex*> (b);
+    pztrmm_(&side, &uplo, &trans, &diag, &na, &na,
+            &alpha, aa, &isrc, &isrc, desc,
+                    bb, &isrc, &isrc, desc);
+}
+
 static inline void Cpdgemm(char transa, char transb, int na,
-                           double alpha, double* A, double* B,
-                           double beta, double* C, int* desc)
+                           double alpha, double* a, double* b,
+                           double beta, double* c, int* desc)
 {
     int isrc=1;
     pdgemm_(&transa, &transb, &na, &na, &na,
-            &alpha, A, &isrc, &isrc, desc,
-                    B, &isrc, &isrc, desc,
-            &beta,  C, &isrc, &isrc, desc);
+            &alpha, a, &isrc, &isrc, desc,
+                    b, &isrc, &isrc, desc,
+            &beta,  c, &isrc, &isrc, desc);
+}
+
+static inline void Cpzgemm(char transa, char transb, int na,
+                           double alpha, std::complex<double>* a, std::complex<double>* b,
+                           double beta, std::complex<double>* c, int* desc)
+{
+	double _Complex* aa=reinterpret_cast<double _Complex*> (a);
+	double _Complex* bb=reinterpret_cast<double _Complex*> (b);
+	double _Complex* cc=reinterpret_cast<double _Complex*> (c);
+    int isrc=1;
+    pzgemm_(&transa, &transb, &na, &na, &na,
+            &alpha, aa, &isrc, &isrc, desc,
+                    bb, &isrc, &isrc, desc,
+            &beta,  cc, &isrc, &isrc, desc);
 }
 
 static inline void Cpdsymm(char side, char uplo, int na,
-                           double alpha, double* A, double* B,
-                           double beta, double* C, int* desc)
+                           double alpha, double* a, double* b,
+                           double beta, double* c, int* desc)
 {
     int isrc=1;
     pdsymm_(&side, &uplo, &na, &na,
-            &alpha, A, &isrc, &isrc, desc,
-                    B, &isrc, &isrc, desc,
-            &beta,  C, &isrc, &isrc, desc);
+            &alpha, a, &isrc, &isrc, desc,
+                    b, &isrc, &isrc, desc,
+            &beta,  c, &isrc, &isrc, desc);
 }
 
 static inline void Cpdgemr2d(int M, int N,
@@ -76,8 +112,8 @@ static inline void Cpdgemr2d(int M, int N,
 }
 
 static inline void Cpzgemr2d(int M, int N,
-                            complex<double>* a, int ia, int ja, int* desca,
-                            complex<double>* b, int ib, int jb, int* descb, int blacs_ctxt)
+                            std::complex<double>* a, int ia, int ja, int* desca,
+                            std::complex<double>* b, int ib, int jb, int* descb, int blacs_ctxt)
 {
 	double _Complex* aa=reinterpret_cast<double _Complex*> (a);
 	double _Complex* bb=reinterpret_cast<double _Complex*> (b);

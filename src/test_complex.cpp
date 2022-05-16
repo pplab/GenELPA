@@ -44,7 +44,7 @@ extern "C"
     #include "my_elpa.h"
 }
 #include "GenELPA.h"
-#include "utils.hpp"
+#include "utils.h"
 
 using namespace std;
 

@@ -7,8 +7,10 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
+#include <unistd.h>
 #include "elpa_solver.h"
-#include "utils.hpp"
+#include "utils.h"
+#include "my_math.hpp"
 
 using namespace std;
 
@@ -149,7 +151,6 @@ int main(int argc, char** argv)
         usleep(myid*LOG_INTERVAL);
         cout<<outlog.str();
     }
-    int inc=1;
     // start testing
     double maxError, meanError;
 
@@ -161,7 +162,7 @@ int main(int argc, char** argv)
         cout<<outlog.str();
     }
     t0=MPI_Wtime();
-    dcopy_(&subMatrixSize, H, &inc, a, &inc);
+    Cdcopy(subMatrixSize, H, a);
     if(loglevel>0)
     {
         outlog.str("");
@@ -205,11 +206,11 @@ int main(int argc, char** argv)
     {
         MPI_Barrier(MPI_COMM_WORLD);
         t0=MPI_Wtime();
-        dcopy_(&subMatrixSize, H, &inc, a, &inc);
+        Cdcopy(subMatrixSize, H, a);
         if(i==0)
         {
             DecomposedState=0;
-            dcopy_(&subMatrixSize, S, &inc, b, &inc);
+            Cdcopy(subMatrixSize, S, b);
         }
         if(loglevel>0)
         {

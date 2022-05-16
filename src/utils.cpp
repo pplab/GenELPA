@@ -6,20 +6,7 @@
 #include <unistd.h>
 #include <complex>
 #include "my_math.hpp"
-
-static inline int globalIndex(int localIndex, int nblk, int nprocs, int myproc)
-{
-    int iblock, gIndex;
-    iblock=localIndex/nblk;
-    gIndex=(iblock*nprocs+myproc)*nblk+localIndex%nblk;
-    return gIndex;
-}
-
-static inline int localIndex(int globalIndex, int nblk, int nprocs, int& myproc)
-{
-    myproc=int((globalIndex%(nblk*nprocs))/nblk);
-    return int(globalIndex/(nblk*nprocs))*nblk+globalIndex%nblk;
-}
+#include "utils.h"
 
 void initBlacsGrid(int loglevel, MPI_Comm comm, int nFull, int nblk,
                          int& blacs_ctxt, int& narows, int& nacols, int desc[])
@@ -103,7 +90,7 @@ void saveLocalMatrix(const char filePrefix[], int narows, int nacols, double* a)
 
     sprintf(FileName, "%s_%3.3d.dat", filePrefix, myid);
     matrixFile.open(FileName);
-    matrixFile.flags(ios_base::scientific);
+    matrixFile.flags(std::ios_base::scientific);
     matrixFile.precision(17);
     matrixFile.width(24);
     for(int i=0; i<narows; ++i)
@@ -243,7 +230,7 @@ void saveMatrix(const char FileName[], int nFull, double* a, int* desca, int bla
     if(myid == ROOT_PROC) // setup saved matrix format
     {
         matrixFile.open(FileName);
-        matrixFile.flags(ios_base::scientific);
+        matrixFile.flags(std::ios_base::scientific);
         matrixFile.precision(17);
         matrixFile.width(24);
     }
@@ -349,7 +336,7 @@ void saveLocalMatrix(const char filePrefix[], int narows, int nacols, std::compl
 
     sprintf(FileName, "%s_%3.3d.dat", filePrefix, myid);
     matrixFile.open(FileName);
-    matrixFile.flags(ios_base::scientific);
+    matrixFile.flags(std::ios_base::scientific);
     matrixFile.precision(17);
     matrixFile.width(24);
     for(int i=0; i<narows; ++i)
@@ -378,7 +365,7 @@ void saveMatrix(const char FileName[], int nFull, std::complex<double>* a, int* 
     if(myid == ROOT_PROC) // setup saved matrix format
     {
         matrixFile.open(FileName);
-        matrixFile.flags(ios_base::scientific);
+        matrixFile.flags(std::ios_base::scientific);
         matrixFile.precision(17);
         matrixFile.width(24);
     }

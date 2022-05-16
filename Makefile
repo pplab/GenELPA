@@ -20,17 +20,20 @@ bin/test_double_legacy: test_double.o lib/libelpa_legacy.so
 test_double.o: src/test_double.cpp
 	mpicxx ${FLAGS} ${INCLUDE} -c src/test_double.cpp
 
-lib/libelpa_legacy.so: elpa_legacy.o
-	mpicxx ${FLAGS} -shared -o lib/libelpa_legacy.so elpa_legacy.o
+lib/libelpa_legacy.so: elpa_legacy.o utils.o
+	mpicxx ${FLAGS} -shared -o lib/libelpa_legacy.so elpa_legacy.o utils.o
 
 elpa_legacy.o: src/elpa_legacy.cpp
 	mpicxx ${FLAGS} ${INCLUDE} ${INCLUDE_legacy} -c -fPIC src/elpa_legacy.cpp
 
-lib/libelpa_new.so: elpa_new.o
-	mpicxx ${FLAGS} -shared -o lib/libelpa_new.so elpa_new.o
+lib/libelpa_new.so: elpa_new.o utils.o
+	mpicxx ${FLAGS} -shared -o lib/libelpa_new.so elpa_new.o utils.o
 
 elpa_new.o: src/elpa_new.cpp
 	mpicxx ${FLAGS} ${INCLUDE} ${INCLUDE_new} -c -fPIC src/elpa_new.cpp
+
+utils.o: src/utils.cpp
+	mpicxx ${FLAGS} ${INCLUDE} -c -fPIC src/utils.cpp
 
 clean:
 	rm *.o lib/*.so bin/*

@@ -14,22 +14,10 @@
 #include "elpa_solver.h"
 
 #include "my_math.hpp"
+#include "utils.h"
 
-static inline int globalIndex(int localIndex, int nblk, int nprocs, int myproc)
-{
-    int iblock, gIndex;
-    iblock=localIndex/nblk;
-    gIndex=(iblock*nprocs+myproc)*nblk+localIndex%nblk;
-    return gIndex;
-}
-
-static inline int localIndex(int globalIndex, int nblk, int nprocs, int& myproc)
-{
-    myproc=int((globalIndex%(nblk*nprocs))/nblk);
-    return int(globalIndex/(nblk*nprocs))*nblk+globalIndex%nblk;
-}
-
-ELPA_Solver::ELPA_Solver(bool isReal, MPI_Comm comm, int nev, int narows, int nacols, int* desc)
+ELPA_Solver::ELPA_Solver(bool isReal, MPI_Comm comm, int nev,
+                         int narows, int nacols, int* desc)
 {
     this->comm=comm;
     this->nev=nev;
@@ -59,7 +47,8 @@ ELPA_Solver::ELPA_Solver(bool isReal, MPI_Comm comm, int nev, int narows, int na
     MPI_Comm_rank(comm, &myid);
 }
 
-ELPA_Solver::ELPA_Solver(bool isReal, MPI_Comm comm, int nev, int narows, int nacols, int* desc, int* otherParameter)
+ELPA_Solver::ELPA_Solver(bool isReal, MPI_Comm comm, int nev,
+                         int narows, int nacols, int* desc, int* otherParameter)
 {
     this->comm=comm;
     this->nev=nev;
@@ -166,35 +155,24 @@ int ELPA_Solver::generalized_eigenvector(double* A, double* B, int& DecomposedSt
     if(DecomposedState == 1 || DecomposedState == 2)
     {
         // calculate A*U^-1, put to work
-        char transa='T';
-        char transb='N';
-        double alpha=1.0;
-        double beta=0.0;
-        int isrc=1;
         if(loglevel>0)
         {
             t=-1;
             timer(myid, "pdgemm_", "2", t);
         }
-        pdgemm_(&transa, &transb, &nFull, &nFull, &nFull,
-                &alpha, A, &isrc, &isrc, desc,
-                        B, &isrc, &isrc, desc,
-                &beta,  dwork, &isrc, &isrc, desc);
+        Cpdgemm('T', 'N', nFull, 1.0, A, B, 0.0, dwork, desc);
         if(loglevel>0)
         {
             timer(myid, "pdgemm_", "2", t);
         }
 
-        // calculate U^-T^(A*U^-1), put to a
+        // calculate U^-T*(A*U^-1), put to a
         if(loglevel>0)
         {
             t=-1;
             timer(myid, "pdgemm_", "3", t);
         }
-        pdgemm_(&transa, &transb, &nFull, &nFull, &nFull,
-                &alpha, B, &isrc, &isrc, desc,
-                        dwork, &isrc, &isrc, desc,
-                &beta,  A, &isrc, &isrc, desc);
+        Cpdgemm('T', 'N', nFull, 1.0, B, dwork, 0.0, A, desc);
         if(loglevel>0)
         {
             timer(myid, "pdgemm_", "3", t);
@@ -203,20 +181,12 @@ int ELPA_Solver::generalized_eigenvector(double* A, double* B, int& DecomposedSt
     else
     {
         // calculate b*a^T and put to work
-        char transa='N';
-        char transb='T';
-        double alpha=1.0;
-        double beta=0.0;
-        int isrc=1;
         if(loglevel>0)
         {
             t=-1;
             timer(myid, "pdgemm_", "2", t);
         }
-        pdgemm_(&transa, &transb, &nFull, &nFull, &nFull,
-                &alpha, B,     &isrc, &isrc, desc,
-                        A,     &isrc, &isrc, desc,
-                &beta,  dwork, &isrc, &isrc, desc);
+        Cpdgemm('N', 'T', nFull, 1.0, B, A, 0.0, dwork, desc);
         if(loglevel>0)
         {
             timer(myid, "pdgemm_", "2", t);
@@ -227,10 +197,7 @@ int ELPA_Solver::generalized_eigenvector(double* A, double* B, int& DecomposedSt
             t=-1;
             timer(myid, "pdgemm_", "3", t);
         }
-        pdgemm_(&transa, &transb, &nFull, &nFull, &nFull,
-                &alpha, B,       &isrc, &isrc, desc,
-                        dwork,   &isrc, &isrc, desc,
-                &beta,  A,       &isrc, &isrc, desc);
+        Cpdgemm('N', 'T', nFull, 1.0, B, dwork, 0.0, A, desc);
         if(loglevel>0)
         {
             timer(myid, "pdgemm_", "3", t);
@@ -316,6 +283,58 @@ int ELPA_Solver::generalized_eigenvector(complex<double>* A, complex<double>* B,
 
     if(allinfo != 0)
         return allinfo;
+
+    if(DecomposedState == 1 || DecomposedState == 2)
+    {
+        // calculate A*U^-1, put to work
+        if(loglevel>0)
+        {
+            t=-1;
+            timer(myid, "A*U^-1", "2", t);
+        }
+        Cpzgemm('C', 'N', nFull, 1.0, A, B, 0.0, zwork, desc);
+        if(loglevel>0)
+        {
+            timer(myid, "A*U^-1", "2", t);
+        }
+
+        // calculate U^-C^(A*U^-1), put to a
+        if(loglevel>0)
+        {
+            t=-1;
+            timer(myid, "U^-C^(A*U^-1)", "3", t);
+        }
+        Cpzgemm('C', 'N', nFull, 1.0, B, zwork, 0.0, A, desc);
+        if(loglevel>0)
+        {
+            timer(myid, "U^-C^(A*U^-1)", "3", t);
+        }
+    }
+    else
+    {
+        // calculate b*a^C and put to work
+        if(loglevel>0)
+        {
+            t=-1;
+            timer(myid, "b*a^C", "2", t);
+        }
+        Cpzgemm('N', 'C', nFull, 1.0, B, A, 0.0, zwork, desc);
+        if(loglevel>0)
+        {
+            timer(myid, "b*a^C", "2", t);
+        }
+        // calculate b*work^C and put to a -- original A*x=v*B*x was transform to a*x'=v*x'
+        if(loglevel>0)
+        {
+            t=-1;
+            timer(myid, "b*work^C", "3", t);
+        }
+        Cpzgemm('N', 'C', nFull, 1.0, B, zwork, 0.0, A, desc);
+        if(loglevel>0)
+        {
+            timer(myid, "b*work^C", "3", t);
+        }
+    }
 
     if(loglevel>0)
     {
@@ -520,14 +539,12 @@ int ELPA_Solver::decomposeRightMatrix(double* B, double* EigenValue, double* Eig
     if(nFull<CHOLESKY_CRITICAL_SIZE)
     {
         DecomposedState=1;
-        char uplo='U';
-        int isrc=1, jsrc=1;
         if(loglevel>0)
         {
             t=-1;
             timer(myid, "pdpotrf_", "1", t);
         }
-        pdpotrf_(&uplo, &nFull, B, &isrc, &jsrc, desc, &info);
+        info=Cpdpotrf('U', nFull, B, desc);
         if(loglevel>0)
         {
             timer(myid, "pdpotrf_", "1", t);
@@ -571,14 +588,12 @@ int ELPA_Solver::decomposeRightMatrix(double* B, double* EigenValue, double* Eig
         if(allinfo != 0)
         {
             DecomposedState=1;
-            char uplo='U';
-            int isrc=1, jsrc=1;
             if(loglevel>0)
             {
                 t=-1;
                 timer(myid, "pdpotrf_", "2", t);
             }
-            pdpotrf_(&uplo, &nFull, B, &isrc, &jsrc, desc, &info);
+            info=Cpdpotrf('U', nFull, B, desc);
             if(loglevel>0)
             {
                 timer(myid, "pdpotrf_", "2", t);
@@ -620,22 +635,34 @@ int ELPA_Solver::decomposeRightMatrix(double* B, double* EigenValue, double* Eig
         }
 
         // calculate qevq=qev*q^T, put to b, which is B^{-1/2}
-        char transa='N', transb='T';
-        double alpha=1.0, beta=0.0;
-        int isrc=1, jsrc=1;
         if(loglevel>0)
         {
             t=-1;
             timer(myid, "pdgemm_", "2", t);
         }
-        pdgemm_(&transa, &transb, &nFull, &nFull, &nFull,
-                &alpha, dwork, &isrc, &jsrc, desc,
-                        EigenVector,    &isrc, &jsrc, desc,
-                &beta,  B,    &isrc, &jsrc, desc);
+        Cpdgemm('N',  'T', nFull, 1.0, dwork, EigenVector, 0.0, B, desc);
         if(loglevel>0)
         {
             timer(myid, "pdgemm_", "2", t);
         }
+    }
+    else// calculate U^{-1}
+    {
+        // clear low triangle
+        for(int j=0; j<nacols; ++j)
+        {
+            int jGlobal=globalIndex(j, nblk, npcols, mypcol);
+            for(int i=0; i<narows; ++i)
+            {
+                int iGlobal=globalIndex(i, nblk, nprows, myprow);
+                if(iGlobal>jGlobal) B[i+j*narows]=0;
+            }
+        }
+        if(loglevel>2) saveMatrix("U.dat", nFull, B, desc, cblacs_ctxt);
+        // calculate the inverse U^{-1}
+        int ldb=narows;
+        info=elpa_invert_trm_real(nFull, B, ldb, nblk, nacols, mpi_comm_rows, mpi_comm_cols, wantDebug);
+        if(loglevel>2) saveMatrix("U_inv.dat", nFull, B, desc, cblacs_ctxt);
     }
     return allinfo;
 }
@@ -645,22 +672,12 @@ int ELPA_Solver::composeEigenVector(int DecomposedState, double* B, double* Eige
     if(DecomposedState==1 || DecomposedState==2)
     {
         // transform the eigenvectors to original general equation, let U^-1*q, and put to q
-        char side='L', uplo='U', transa='N', diag='N';
-        double alpha=1.0;
-        int isrc=1, jsrc=1;
-        pdtrmm_(&side, &uplo, &transa,  &diag, &nFull, &nFull,
-                &alpha, B,          &isrc, &jsrc, desc,
-                        EigenVector,&isrc, &jsrc, desc);
+
+        Cpdtrmm('L', 'U', 'N', 'N', nFull, 1.0, B, EigenVector, desc);
     } else
     {
         // transform the eigenvectors to original general equation, let b^T*q, and put to q
-        char transa='T', transb='N';
-        double alpha=1.0, beta=0.0;
-        int isrc=1, jsrc=1;
-        pdgemm_(&transa, &transb, &nFull, &nFull, &nFull,
-                &alpha, B,          &isrc, &jsrc, desc,
-                        dwork,      &isrc, &jsrc, desc,
-                &beta,  EigenVector,&isrc, &jsrc, desc);
+        Cpdgemm('T', 'N', nFull, 1.0, B, dwork, 0.0, EigenVector, desc);
 
     }
     return 0;
@@ -670,7 +687,6 @@ int ELPA_Solver::decomposeRightMatrix(complex<double>* B, double* EigenValue, co
 {
     double _Complex* b = reinterpret_cast<double _Complex*>(B);
     double _Complex* q = reinterpret_cast<double _Complex*>(EigenVector);
-    double _Complex* z = reinterpret_cast<double _Complex*>(zwork);
 
     int info=0;
     int allinfo=0;
@@ -682,14 +698,12 @@ int ELPA_Solver::decomposeRightMatrix(complex<double>* B, double* EigenValue, co
     if(nFull<CHOLESKY_CRITICAL_SIZE)
     {
         DecomposedState=1;
-        char uplo='U';
-        int isrc=1, jsrc=1;
         if(loglevel>0)
         {
             t=-1;
             timer(myid, "pzpotrf_", "1", t);
         }
-        pzpotrf_(&uplo, &nFull, b, &isrc, &jsrc, desc, &info);
+        info=Cpzpotrf('U', nFull, B, desc);
         if(loglevel>0)
         {
             timer(myid, "pzpotrf_", "1", t);
@@ -733,14 +747,12 @@ int ELPA_Solver::decomposeRightMatrix(complex<double>* B, double* EigenValue, co
         if(allinfo != 0)
         {
             DecomposedState=1;
-            char uplo='U';
-            int isrc=1, jsrc=1;
             if(loglevel>0)
             {
                 t=-1;
                 timer(myid, "pzpotrf_", "2", t);
             }
-            pzpotrf_(&uplo, &nFull, b, &isrc, &jsrc, desc, &info);
+            info=Cpzpotrf('U', nFull, B, desc);
             if(loglevel>0)
             {
                 timer(myid, "pzpotrf_", "2", t);
@@ -781,18 +793,12 @@ int ELPA_Solver::decomposeRightMatrix(complex<double>* B, double* EigenValue, co
         }
 
         // calculate qevq=qev*q^T, put to b, which is B^{-1/2}
-        char transa='N', transb='C';
-        double alpha=1.0, beta=0.0;
-        int isrc=1, jsrc=1;
         if(loglevel>0)
         {
             t=-1;
             timer(myid, "pzgemm_", "2", t);
         }
-        pzgemm_(&transa, &transb, &nFull, &nFull, &nFull,
-                &alpha, z, &isrc, &jsrc, desc,
-                        q, &isrc, &jsrc, desc,
-                &beta,  b, &isrc, &jsrc, desc);
+        Cpzgemm('N', 'C', nFull, 1.0, zwork, EigenVector, 0.0, B, desc);
         if(loglevel>0)
         {
             timer(myid, "pzgemm_", "2", t);
@@ -803,29 +809,14 @@ int ELPA_Solver::decomposeRightMatrix(complex<double>* B, double* EigenValue, co
 
 int ELPA_Solver::composeEigenVector(int DecomposedState, complex<double>* B, complex<double>* EigenVector)
 {
-    double _Complex* b = reinterpret_cast<double _Complex*>(B);
-    double _Complex* q = reinterpret_cast<double _Complex*>(EigenVector);
-    double _Complex* z = reinterpret_cast<double _Complex*>(zwork);
-
     if(DecomposedState==1 || DecomposedState==2)
     {
         // transform the eigenvectors to original general equation, let U^-1*q, and put to q
-        char side='L', uplo='U', transa='N', diag='N';
-        double alpha=1.0;
-        int isrc=1, jsrc=1;
-        pztrmm_(&side, &uplo, &transa,  &diag, &nFull, &nFull,
-                &alpha, b, &isrc, &jsrc, desc,
-                        q, &isrc, &jsrc, desc);
+        Cpztrmm('L', 'U', 'N', 'N', nFull, 1.0, B, EigenVector, desc);
     } else
     {
-        // transform the eigenvectors to original general equation, let b^T*q, and put to q
-        char transa='T', transb='N';
-        double alpha=1.0, beta=0.0;
-        int isrc=1, jsrc=1;
-        pzgemm_(&transa, &transb, &nFull, &nFull, &nFull,
-                &alpha, b, &isrc, &jsrc, desc,
-                        z, &isrc, &jsrc, desc,
-                &beta,  q, &isrc, &jsrc, desc);
+        // transform the eigenvectors to original general equation, let b^C*q, and put to q
+        Cpzgemm('C', 'N', nFull, 1.0, B, zwork, 0.0, EigenVector, desc);
 
     }
     return 0;
@@ -899,88 +890,24 @@ void ELPA_Solver::verify(double* A, double* EigenValue, double* EigenVector,
                          R, 1, i, 1, desc);
         //printf("myid: %d, i: %d, E: %lf\n", myid, i, E);
         sumError+=E;
-        maxError=maxError>E?maxError:E;
+        maxError=std::max(E, maxError);
     }
     meanError=sumError/nFull;
     // global mean and max Error
     delete[] D;
 }
-/*
-void ELPA_Solver::verify(double* A, double* EigenValue, double* EigenVector,
-                         double &maxRemain, double &meanRemain)
-{
-    double* V=EigenVector;
-    const int naloc=narows*nacols;
-    double* D=new double[naloc];
-    double* R=dwork;
 
-    for(int i=0; i<naloc; ++i)
-        D[i]=0;
 
-    for(int i=0; i<nFull; ++i)
-    {
-        int localRow, localCol;
-        int localProcRow, localProcCol;
-
-        localRow=localIndex(i, nblk, nprows, localProcRow);
-        if(myprow==localProcRow)
-        {
-            localCol=localIndex(i, nblk, npcols, localProcCol);
-            if(mypcol==localProcCol)
-            {
-                int idx = localRow + localCol*narows;
-                D[idx]=EigenValue[i];
-            }
-        }
-    }
-
-    char Trans='N';
-    double alpha=1.0, beta=0.0;
-    int isrc=1;
-    // R=V*D
-    pdgemm_(&Trans, &Trans,
-            &nFull, &nFull, &nFull,
-            &alpha,
-            V,      &isrc, &isrc, desc,
-            D,      &isrc, &isrc, desc,
-            &beta,
-            R,      &isrc, &isrc, desc);
-    // R=A*V-V*D=A*V-R
-    beta=-1.0;
-    pdgemm_(&Trans, &Trans,
-            &nFull, &nFull, &nFull,
-            &alpha,
-            A,      &isrc, &isrc, desc,
-            V,      &isrc, &isrc, desc,
-            &beta,
-            R,      &isrc, &isrc, desc);
-
-    // local mean R and max R
-    double R_mean=0;
-    double R_max=0;
-    for(int i=0; i<naloc; ++i)
-    {
-        R_mean+=R[i];
-        if(abs(R[i])>R_max)
-            R_max=abs(R[i]);
-    }
-    R_mean/=naloc;
-
-    // global mean and max R
-    MPI_Allreduce(&R_mean, &meanRemain, 1, MPI_DOUBLE, MPI_SUM, comm);
-    meanRemain/=(nprows*npcols);
-    MPI_Allreduce(&R_max, &maxRemain, 1, MPI_DOUBLE, MPI_MAX, comm);
-
-    delete[] D;
-}*/
-
-// calculate remains of A*V - B*V*D
+// calculate the computational error
+// $ \ket{ \delta \psi_i } = (H - \epsilon_i S)\ket{\psi_i} $
+// $ \delta_i = \braket{ \delta \psi_i | \delta \psi_i } $
+//
 // V: eigenvector matrix
 // D: Diaganal matrix of eigenvalue
-// maxRemain: maximum absolute value of remains
-// meanRemain: mean absolute value of remains
+// maxError: maximum absolute value of error
+// meanError: mean absolute value of error
 void ELPA_Solver::verify(double* A, double* B, double* EigenValue, double* EigenVector,
-                        double &maxRemain, double &meanRemain)
+                        double &maxError, double &meanError)
 {
     double* V=EigenVector;
     const int naloc=narows*nacols;
@@ -1007,50 +934,25 @@ void ELPA_Solver::verify(double* A, double* B, double* EigenValue, double* Eigen
         }
     }
 
-    char Trans='N';
-    double alpha=1.0, beta=0.0;
-    int isrc=1;
     // dwork=B*V
-    pdgemm_(&Trans, &Trans,
-            &nFull, &nFull, &nFull,
-            &alpha,
-            B,      &isrc, &isrc, desc,
-            V,      &isrc, &isrc, desc,
-            &beta,
-            dwork,  &isrc, &isrc, desc);
+    Cpdsymm('L', 'U', nFull, 1.0, B, V, 0.0, dwork, desc);
     // R=B*V*D=dwork*D
-    pdgemm_(&Trans, &Trans,
-            &nFull, &nFull, &nFull,
-            &alpha,
-            dwork,  &isrc, &isrc, desc,
-            D,      &isrc, &isrc, desc,
-            &beta,
-            R,      &isrc, &isrc, desc);
+    Cpdsymm('R', 'U', nFull, 1.0, D, dwork, 0.0, R, desc);
     // R=A*V-B*V*D=A*V-R
-    beta=-1.0;
-    pdgemm_(&Trans, &Trans,
-            &nFull, &nFull, &nFull,
-            &alpha,
-            A,      &isrc, &isrc, desc,
-            V,      &isrc, &isrc, desc,
-            &beta,
-            R,      &isrc, &isrc, desc);
-
-    // local mean R and max R
-    double R_mean=0;
-    double R_max=0;
-    for(int i=0; i<naloc; ++i)
+    Cpdsymm('L', 'U', nFull, 1.0, A, V, -1.0, R, desc);
+    // calculate the maximum and mean value of sum_i{R(:,i)*R(:,i)}
+    double sumError=0;
+    maxError=0;
+    for(int i=1; i<=nFull; ++i)
     {
-        R_mean+=R[i];
-        if(abs(R[i])>R_max)
-            R_max=abs(R[i]);
+        double E;
+        Cpddot(nFull, E, R, 1, i, 1,
+                         R, 1, i, 1, desc);
+        //printf("myid: %d, i: %d, E: %lf\n", myid, i, E);
+        sumError+=E;
+        maxError=maxError>E?maxError:E;
     }
-    R_mean/=naloc;
-
-    // global mean and max R
-    MPI_Allreduce(&R_mean, &meanRemain, 1, MPI_DOUBLE, MPI_SUM, comm);
-    meanRemain/=(nprows*npcols);
-    MPI_Allreduce(&R_max, &maxRemain, 1, MPI_DOUBLE, MPI_MAX, comm);
+    meanError=sumError/nFull;
 
     delete[] D;
     delete[] R;

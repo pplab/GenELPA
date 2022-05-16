@@ -13,13 +13,14 @@
 #include "elpa_solver.h"
 
 #include "my_math.hpp"
-#include "utils.hpp"
+#include "utils.h"
 
 using namespace std;
 
 static map<int, elpa_t> handle_pool;
 
-ELPA_Solver::ELPA_Solver(bool isReal, MPI_Comm comm, int nev, int narows, int nacols, int* desc)
+ELPA_Solver::ELPA_Solver(bool isReal, MPI_Comm comm, int nev,
+                         int narows, int nacols, int* desc)
 {
     this->comm=comm;
     this->nev=nev;
@@ -72,7 +73,8 @@ ELPA_Solver::ELPA_Solver(bool isReal, MPI_Comm comm, int nev, int narows, int na
         elpa_set_integer(handle_pool[handle_id], "real_kernel", kernel_id, &error);
 }
 
-ELPA_Solver::ELPA_Solver(bool isReal, MPI_Comm comm, int nev, int narows, int nacols, int* desc, int* otherParameter)
+ELPA_Solver::ELPA_Solver(bool isReal, MPI_Comm comm, int nev,
+                         int narows, int nacols, int* desc, int* otherParameter)
 {
     this->comm=comm;
     this->nev=nev;
