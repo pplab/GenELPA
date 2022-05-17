@@ -16,13 +16,15 @@ class ELPA_Solver
     void setLoglevel(int loglevel);
     void setKernel(int Kernel);
     void setKernel(int Kernel, int useQR);
-
     void verify(double* A, double* EigenValue, double* EigenVector,
                 double &maxRemain, double &meanRemain);
-
     void verify(double* A, double* B, double* EigenValue, double* EigenVector,
                 double &maxRemain, double &meanRemain);
-
+	void verify(complex<double>* A, double* EigenValue, complex<double>* EigenVector,
+                         double &maxError, double &meanError);
+	void verify(complex<double>* A, complex<double>* B,
+                double* EigenValue, complex<double>* EigenVector,
+                double &maxError, double &meanError);
     void exit();
 
     private:
