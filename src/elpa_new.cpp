@@ -4,10 +4,11 @@
 #include <fstream>
 #include <cfloat>
 #include <cstring>
-#include <mpi.h>
-
 #include <iostream>
 #include <sstream>
+#include <unistd.h>
+
+#include <mpi.h>
 
 #include "elpa_new.h"
 #include "elpa_solver.h"
@@ -428,6 +429,7 @@ void ELPA_Solver::timer(int myid, const char function[], const char step[], doub
 
 void ELPA_Solver::outputParameters()
 {
+    const int LOG_INTERVAL=min(int(1e6/(nprows*npcols) ), 500); // unit: micro seconds
     stringstream outlog;
     outlog.str("");
     outlog<<"myid "<<myid<<": comm id(in FORTRAN):"<<MPI_Comm_c2f(comm)<<endl;
@@ -441,8 +443,9 @@ void ELPA_Solver::outputParameters()
     for(int i=0; i<9; ++i) outlog<<desc[i]<<" ";
     outlog<<endl;
     outlog<<"myid "<<myid<<": nblk: "<<nblk<<" lda: "<<lda<<endl;
-
-    outlog<<"myid "<<myid<<": useQR: "<<useQR<<" wantDebug: "<<wantDebug<<endl;
-
+    outlog<<"myid "<<myid<<": useQR: "<<useQR<<" kernel:"<<kernel_id<<endl;;
+    outlog<<"myid "<<myid<<": wantDebug: "<<wantDebug<<" loglevel: "<<loglevel<<endl;
+    MPI_Barrier(MPI_COMM_WORLD);
+    usleep(myid*LOG_INTERVAL);
     cout<<outlog.str();
 }

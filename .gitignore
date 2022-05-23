@@ -3,4 +3,6 @@ bin
 lib
 test
 *.sh
+test_real
+test_complex
 

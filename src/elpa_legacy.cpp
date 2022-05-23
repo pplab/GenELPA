@@ -2,13 +2,11 @@
 #include <regex>
 #include <fstream>
 #include <cfloat>
-#include <cmath>
 #include <cstring>
-
 #include <iostream>
 #include <sstream>
-
 #include <unistd.h>
+
 #include <mpi.h>
 
 #include "elpa_legacy.h"
