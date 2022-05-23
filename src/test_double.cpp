@@ -102,7 +102,6 @@ int main(int argc, char** argv)
     t0=MPI_Wtime();
 
     loadMatrix("H.dat", nFull, H, desc, my_blacs_ctxt);
-    //initPositiveDefiniteMatrix(1, nFull, narows, nacols, H, ISRC, ISRC, desc);
     if(loglevel>0)
     {
         if(myid==0)
@@ -115,7 +114,6 @@ int main(int argc, char** argv)
     }
 
     loadMatrix("S.dat", nFull, S, desc, my_blacs_ctxt);
-    //initPositiveDefiniteMatrix(2, nFull, narows, nacols, S, ISRC, ISRC, desc);
     if(loglevel>0)
     {
         if(myid==MPIROOT)
@@ -151,6 +149,9 @@ int main(int argc, char** argv)
         usleep(myid*LOG_INTERVAL);
         cout<<outlog.str();
     }
+    // check elpa parameters
+    if(loglevel>1) es.outputParameters();
+
     // start testing
     double maxError, meanError;
 

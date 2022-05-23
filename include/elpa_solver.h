@@ -16,6 +16,7 @@ class ELPA_Solver
     void setLoglevel(int loglevel);
     void setKernel(int Kernel);
     void setKernel(int Kernel, int useQR);
+    void outputParameters();
     void verify(double* A, double* EigenValue, double* EigenVector,
                 double &maxRemain, double &meanRemain);
     void verify(double* A, double* B, double* EigenValue, double* EigenVector,
@@ -68,5 +69,4 @@ class ELPA_Solver
     int composeEigenVector(int DecomposedState, complex<double>* B, complex<double>* EigenVector);
     // debug tool
     void timer(int myid, const char function[], const char step[], double &t0);
-    void outputParameters();
 };

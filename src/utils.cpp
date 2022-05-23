@@ -80,6 +80,57 @@ void initBlacsGrid(int loglevel, MPI_Comm comm, int nFull, int nblk,
     }
 }
 
+// load matrix from the file
+void loadMatrix(const char FileName[], int nFull, double* a, int* desca, int blacs_ctxt)
+{
+    int nprows, npcols, myprow, mypcol;
+    Cblacs_gridinfo(blacs_ctxt, &nprows, &npcols, &myprow, &mypcol);
+    int myid=Cblacs_pnum(blacs_ctxt, myprow, mypcol);
+
+    const int ROOT_PROC=0;
+    std::ifstream matrixFile;
+    if(myid == ROOT_PROC)
+        matrixFile.open(FileName);
+
+    double *b; // buffer
+    const int MAX_BUFFER_SIZE=1e9; // max buffer size is 1GB
+
+    int N=nFull;
+    int M=std::max( 1, std::min( nFull, (int)(MAX_BUFFER_SIZE/nFull/sizeof(double) ) ) ); // at lease 1 row, max size 1GB
+    if(myid == ROOT_PROC)
+        b=new double[M*N];
+    else
+        b=new double[1];
+
+    //set descb, which has all elements in the only block in the root process
+    // block size is M x N, so all elements are in the first process
+    int descb[9]={1, blacs_ctxt, M, N, M, N, 0, 0, M};
+
+    int ja=1, ib=1, jb=1;
+    for(int ia=1; ia<nFull; ia+=M)
+    {
+        int thisM=std::min(M, nFull-ia+1); // nFull-ia+1 is number of the last few rows to be read from file
+        // read from the file
+        if(myid == ROOT_PROC)
+        {
+            for(int i=0; i<thisM; ++i)
+            {
+                for(int j=0; j<N; ++j)
+                {
+                    matrixFile>>b[i+j*M];
+                }
+            }
+        }
+        // gather data rows by rows from all processes
+        Cpdgemr2d(thisM, N, b, ib, jb, descb, a, ia, ja, desca, blacs_ctxt);
+    }
+
+    if(myid == ROOT_PROC)
+        matrixFile.close();
+
+    delete[] b;
+}
+
 void saveLocalMatrix(const char filePrefix[], int narows, int nacols, double* a)
 {
     using namespace std;
@@ -275,7 +326,7 @@ void saveMatrix(const char FileName[], int nFull, double* a, int* desca, int bla
 }
 
 // load matrix from the file
-void loadMatrix(const char FileName[], int nFull, double* a, int* desca, int blacs_ctxt)
+void loadMatrix(const char FileName[], int nFull, std::complex<double>* a, int* desca, int blacs_ctxt)
 {
     int nprows, npcols, myprow, mypcol;
     Cblacs_gridinfo(blacs_ctxt, &nprows, &npcols, &myprow, &mypcol);
@@ -286,15 +337,15 @@ void loadMatrix(const char FileName[], int nFull, double* a, int* desca, int bla
     if(myid == ROOT_PROC)
         matrixFile.open(FileName);
 
-    double *b; // buffer
+    std::complex<double> *b; // buffer
     const int MAX_BUFFER_SIZE=1e9; // max buffer size is 1GB
 
     int N=nFull;
-    int M=std::max( 1, std::min( nFull, (int)(MAX_BUFFER_SIZE/nFull/sizeof(double) ) ) ); // at lease 1 row, max size 1GB
+    int M=std::max( 1, std::min( nFull, (int)(MAX_BUFFER_SIZE/nFull/(2*sizeof(double)) ) ) ); // at lease 1 row, max size 1GB
     if(myid == ROOT_PROC)
-        b=new double[M*N];
+        b=new std::complex<double>[M*N];
     else
-        b=new double[1];
+        b=new std::complex<double>[1];
 
     //set descb, which has all elements in the only block in the root process
     // block size is M x N, so all elements are in the first process
@@ -316,7 +367,7 @@ void loadMatrix(const char FileName[], int nFull, double* a, int* desca, int bla
             }
         }
         // gather data rows by rows from all processes
-        Cpdgemr2d(thisM, N, b, ib, jb, descb, a, ia, ja, desca, blacs_ctxt);
+        Cpzgemr2d(thisM, N, b, ib, jb, descb, a, ia, ja, desca, blacs_ctxt);
     }
 
     if(myid == ROOT_PROC)

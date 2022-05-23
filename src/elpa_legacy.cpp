@@ -8,6 +8,7 @@
 #include <iostream>
 #include <sstream>
 
+#include <unistd.h>
 #include <mpi.h>
 
 #include "elpa_legacy.h"
@@ -282,4 +283,29 @@ void ELPA_Solver::timer(int myid, const char function[], const char step[], doub
               <<step<<" "<<function<<" time: "<<t1-t0<<" s"<<endl;
         cout<<outlog.str();
     }
+}
+
+void ELPA_Solver::outputParameters()
+{
+    const int LOG_INTERVAL=min(int(1e6/(nprows*npcols) ), 500); // unit: micro seconds
+    stringstream outlog;
+    outlog.str("");
+    outlog<<"myid "<<myid<<": comm id(in FORTRAN):"<<MPI_Comm_c2f(comm)<<endl;
+    outlog<<"myid "<<myid<<": nprows: "<<nprows<<" npcols: "<<npcols<<endl;
+    outlog<<"myid "<<myid<<": myprow: "<<myprow<<" mypcol: "<<mypcol<<endl;
+    outlog<<"myid "<<myid<<": nFull: "<<nFull<<" nev: "<<nev<<endl;
+    outlog<<"myid "<<myid<<": narows: "<<narows<<" nacols: "<<nacols<<endl;
+    outlog<<"myid "<<myid<<": blacs parameters setting"<<endl;
+    outlog<<"myid "<<myid<<": blacs ctxt:"<<cblacs_ctxt<<endl;
+    outlog<<"myid "<<myid<<": desc: ";
+    for(int i=0; i<9; ++i) outlog<<desc[i]<<" ";
+    outlog<<endl;
+    outlog<<"myid "<<myid<<": nblk: "<<nblk<<" lda: "<<lda<<endl;
+    outlog<<"myid "<<myid<<": useQR: "<<useQR<<" kernel:"<<kernel_id<<endl;;
+    outlog<<"myid "<<myid<<": wantDebug: "<<wantDebug<<" loglevel: "<<loglevel<<endl;
+    outlog<<"myid "<<myid<<": comm_f: "<<comm_f<<" mpi_comm_rows: "<<mpi_comm_rows
+          <<" mpi_comm_cols: "<<mpi_comm_cols<<endl;
+    MPI_Barrier(MPI_COMM_WORLD);
+    usleep(myid*LOG_INTERVAL);
+    cout<<outlog.str();
 }

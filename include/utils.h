@@ -10,14 +10,17 @@ static inline int globalIndex(int localIndex, int nblk, int nprocs, int myproc)
     return gIndex;
 }
 
-static inline int localIndex(int globalIndex, int nblk, int nprocs, int& myproc)
+static inline int localIndex(int globalIndex, int nblk, int nprocs, int& lcoalProc)
 {
-    myproc=int((globalIndex%(nblk*nprocs))/nblk);
+    lcoalProc=int((globalIndex%(nblk*nprocs))/nblk);
     return int(globalIndex/(nblk*nprocs))*nblk+globalIndex%nblk;
 }
 
 void initBlacsGrid(int loglevel, MPI_Comm comm, int nFull, int nblk,
                          int& blacs_ctxt, int& narows, int& nacols, int desc[]);
+
+// load matrix from the file
+void loadMatrix(const char FileName[], int nFull, double* a, int* desca, int blacs_ctxt);
 
 void saveLocalMatrix(const char filePrefix[], int narows, int nacols, double* a);
 
@@ -25,8 +28,8 @@ void saveLocalMatrix(const char filePrefix[], int narows, int nacols, double* a)
 // and save to one completed matrix file
 void saveMatrix(const char FileName[], int nFull, double* a, int* desca, int blacs_ctxt);
 
-// load matrix from the file
-void loadMatrix(const char FileName[], int nFull, double* a, int* desca, int blacs_ctxt);
+
+void loadMatrix(const char FileName[], int nFull, std::complex<double>* a, int* desca, int blacs_ctxt);
 
 void saveLocalMatrix(const char filePrefix[], int narows, int nacols, std::complex<double>* a);
 

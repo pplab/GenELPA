@@ -16,10 +16,12 @@ static inline void Cdcopy(const int n, double* a, double* b)
     dcopy_(&n, a, &inc, b, &inc);
 }
 
-static inline void Czcopy(const int n, double _Complex* a, double _Complex* b)
+static inline void Czcopy(const int n, std::complex<double>* a, std::complex<double>* b)
 {
+    double _Complex* aa=reinterpret_cast<double _Complex*> (a);
+    double _Complex* bb=reinterpret_cast<double _Complex*> (b);
     int inc=1;
-    zcopy_(&n, a, &inc, b, &inc);
+    zcopy_(&n, aa, &inc, bb, &inc);
 }
 
 static inline void Cpddot(int n, double& dot,
@@ -67,16 +69,17 @@ static inline void Cpdtrmm(char side, char uplo, char trans, char diag,
                     b, &isrc, &isrc, desc);
 }
 
-static inline void Cpztrmm(char side, char uplo, char trans, char diag,
-                          int na, double alpha, std::complex<double>* a, 
+static inline void Cpztrmm(char side, char uplo, char trans, char diag, int na, 
+						  std::complex<double> alpha, std::complex<double>* a, 
                           std::complex<double>* b, int* desc)
 {
     int isrc=1;
+	double _Complex* alpha_c=reinterpret_cast<double _Complex*> (&alpha);
     double _Complex* aa=reinterpret_cast<double _Complex*> (a);
     double _Complex* bb=reinterpret_cast<double _Complex*> (b);
     pztrmm_(&side, &uplo, &trans, &diag, &na, &na,
-            &alpha, aa, &isrc, &isrc, desc,
-                    bb, &isrc, &isrc, desc);
+            alpha_c, aa, &isrc, &isrc, desc,
+                     bb, &isrc, &isrc, desc);
 }
 
 static inline void Cpdgemm(char transa, char transb, int na,
@@ -91,17 +94,19 @@ static inline void Cpdgemm(char transa, char transb, int na,
 }
 
 static inline void Cpzgemm(char transa, char transb, int na,
-                           double alpha, std::complex<double>* a, std::complex<double>* b,
-                           double beta, std::complex<double>* c, int* desc)
+                           std::complex<double> alpha, std::complex<double>* a, std::complex<double>* b,
+                           std::complex<double> beta, std::complex<double>* c, int* desc)
 {
+	double _Complex* alpha_c=reinterpret_cast<double _Complex*> (&alpha);
+	double _Complex* beta_c=reinterpret_cast<double _Complex*> (&beta);
 	double _Complex* aa=reinterpret_cast<double _Complex*> (a);
 	double _Complex* bb=reinterpret_cast<double _Complex*> (b);
 	double _Complex* cc=reinterpret_cast<double _Complex*> (c);
     int isrc=1;
     pzgemm_(&transa, &transb, &na, &na, &na,
-            &alpha, aa, &isrc, &isrc, desc,
-                    bb, &isrc, &isrc, desc,
-            &beta,  cc, &isrc, &isrc, desc);
+            alpha_c, aa, &isrc, &isrc, desc,
+                     bb, &isrc, &isrc, desc,
+            beta_c,  cc, &isrc, &isrc, desc);
 }
 
 static inline void Cpdsymm(char side, char uplo, int na,
@@ -126,6 +131,22 @@ static inline void Cpzsymm(char side, char uplo, int na,
 	double _Complex* cc=reinterpret_cast<double _Complex*> (c);
     int isrc=1;
     pzsymm_(&side, &uplo, &na, &na,
+            alpha_c, aa, &isrc, &isrc, desc,
+                    bb, &isrc, &isrc, desc,
+            beta_c,  cc, &isrc, &isrc, desc);
+}
+
+static inline void Cpzhemm(char side, char uplo, int na,
+                           std::complex<double> alpha, std::complex<double>* a, std::complex<double>* b,
+                           std::complex<double> beta, std::complex<double>* c, int* desc)
+{
+	double _Complex* alpha_c=reinterpret_cast<double _Complex*> (&alpha);
+	double _Complex* beta_c=reinterpret_cast<double _Complex*> (&beta);
+	double _Complex* aa=reinterpret_cast<double _Complex*> (a);
+	double _Complex* bb=reinterpret_cast<double _Complex*> (b);
+	double _Complex* cc=reinterpret_cast<double _Complex*> (c);
+    int isrc=1;
+    pzhemm_(&side, &uplo, &na, &na,
             alpha_c, aa, &isrc, &isrc, desc,
                     bb, &isrc, &isrc, desc,
             beta_c,  cc, &isrc, &isrc, desc);

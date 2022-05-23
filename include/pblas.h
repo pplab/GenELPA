@@ -19,12 +19,16 @@ void pdgemm_(char* transa , char* transb , int* m , int* n , int* k ,
 void pzgemm_(char* transa , char* transb , int* m , int* n , int* k ,
              double _Complex* alpha , double _Complex* a , int* ia , int* ja , int* desca ,
 									  double _Complex* b , int* ib , int* jb , int* descb ,
-             double* beta , 		  double _Complex* c , int* ic , int* jc , int* descc );
+             double _Complex* beta ,  double _Complex* c , int* ic , int* jc , int* descc );
 void pdsymm_(char* side , char* uplo , int* m , int* n ,
              double* alpha , double* a , int* ia , int* ja , int* desca ,
                              double* b , int* ib , int* jb , int* descb ,
              double* beta ,  double* c , int* ic , int* jc , int* descc );
 void pzsymm_(char* side , char* uplo , int* m , int* n ,
+             double _Complex* alpha , double _Complex* a , int* ia , int* ja , int* desca ,
+									  double _Complex* b , int* ib , int* jb , int* descb ,
+             double _Complex* beta ,  double _Complex* c , int* ic , int* jc , int* descc );
+void pzhemm_(char* side , char* uplo , int* m , int* n ,
              double _Complex* alpha , double _Complex* a , int* ia , int* ja , int* desca ,
 									  double _Complex* b , int* ib , int* jb , int* descb ,
              double _Complex* beta ,  double _Complex* c , int* ic , int* jc , int* descc );
