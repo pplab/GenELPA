@@ -160,10 +160,7 @@ void ELPA_Solver::exit()
     delete[] dwork;
     delete[] zwork;
     int error;
-    for(auto const &handle:NEW_ELPA_HANDLE_POOL)
-    {
-        elpa_deallocate(handle.second, &error);
-    }
+    elpa_deallocate(NEW_ELPA_HANDLE_POOL[handle_id], &error);
 }
 
 int ELPA_Solver::read_cpuflag()
@@ -405,10 +402,8 @@ int ELPA_Solver::allocate_work(bool isReal)
         return 1;
 }
 
-//int ELPA_Solver::timer(int myid, const char function[], const char step[], double &t0)
 void ELPA_Solver::timer(int myid, const char function[], const char step[], double &t0)
 {
-    //MPI_Barrier(comm);
     double t1;
     stringstream outlog;
     if(t0<0)  // t0 < 0 means this is the init call before the function
@@ -429,7 +424,6 @@ void ELPA_Solver::timer(int myid, const char function[], const char step[], doub
 
 void ELPA_Solver::outputParameters()
 {
-    const int LOG_INTERVAL=min(int(1e6/(nprows*npcols) ), 500); // unit: micro seconds
     stringstream outlog;
     outlog.str("");
     outlog<<"myid "<<myid<<": comm id(in FORTRAN):"<<MPI_Comm_c2f(comm)<<endl;
@@ -445,7 +439,5 @@ void ELPA_Solver::outputParameters()
     outlog<<"myid "<<myid<<": nblk: "<<nblk<<" lda: "<<lda<<endl;
     outlog<<"myid "<<myid<<": useQR: "<<useQR<<" kernel:"<<kernel_id<<endl;;
     outlog<<"myid "<<myid<<": wantDebug: "<<wantDebug<<" loglevel: "<<loglevel<<endl;
-    MPI_Barrier(MPI_COMM_WORLD);
-    usleep(myid*LOG_INTERVAL);
     cout<<outlog.str();
 }

@@ -7,7 +7,6 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
-#include <unistd.h>
 #include "elpa_solver.h"
 #include "utils.h"
 #include "my_math.hpp"
@@ -20,7 +19,6 @@ int main(int argc, char** argv)
     int myid, nprocs;
     int my_blacs_ctxt;
     int info;
-    const int MPIROOT=0;
     int narows, nacols;
     double *H, *S, *a, *b, *q, *ev;
     int desc[9];
@@ -34,10 +32,8 @@ int main(int argc, char** argv)
     MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
     MPI_Comm_rank(MPI_COMM_WORLD, &myid);
 
-    const int LOG_INTERVAL=min(int(1e6/nprocs), 500); // unit: micro seconds
-
     //load parameters
-    if(myid==MPIROOT)
+    if(myid==0)
     {
         fstream inputFile("INPUT");
         if(!inputFile)
@@ -50,41 +46,36 @@ int main(int argc, char** argv)
             info=0;
             inputFile>>nFull>>nev>>nblk>>ntest>>loglevel;
             inputFile.close();
-            usleep(20);
             outlog.str("");
             outlog<<"parameters loaded: "<<nFull<<" "<<nev<<" "<<nblk<<" "<<ntest<<" "<<loglevel<<endl;
             cout<<outlog.str();
         }
     }
 
-    MPI_Bcast(&info, 1, MPI_INT, MPIROOT, MPI_COMM_WORLD);
+    MPI_Bcast(&info, 1, MPI_INT, 0, MPI_COMM_WORLD);
     if(info != 0)
     {
         MPI_Finalize();
         return info;
     }
 
-    MPI_Bcast(&nFull, 1, MPI_INT, MPIROOT, MPI_COMM_WORLD);
-    MPI_Bcast(&nev, 1, MPI_INT, MPIROOT, MPI_COMM_WORLD);
-    MPI_Bcast(&nblk, 1, MPI_INT, MPIROOT, MPI_COMM_WORLD);
-    MPI_Bcast(&ntest, 1, MPI_INT, MPIROOT, MPI_COMM_WORLD);
-    MPI_Bcast(&loglevel, 1, MPI_INT, MPIROOT, MPI_COMM_WORLD);
+    MPI_Bcast(&nFull, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&nev, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&nblk, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&ntest, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&loglevel, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
-    if(loglevel>0)
+    if(loglevel>1)
     {
         outlog.str("");
         outlog<<"myid "<<myid<<": parameters synchonized";
         outlog<<" nFull: "<<nFull<<" nev: "<<nev<<" nblk: "<<nblk<<" ntest: "<<ntest<<" loglevel: "<<loglevel<<endl;
-        MPI_Barrier(MPI_COMM_WORLD);
-        usleep(myid*LOG_INTERVAL);
         cout<<outlog.str();
     }
 
     // set blacs parameters
-    MPI_Barrier(MPI_COMM_WORLD);
     initBlacsGrid(loglevel, MPI_COMM_WORLD, nFull, nblk,
                   my_blacs_ctxt, narows, nacols, desc);
-    MPI_Barrier(MPI_COMM_WORLD);
 
     //init main matrices
     int subMatrixSize=narows*nacols;
@@ -102,36 +93,28 @@ int main(int argc, char** argv)
     t0=MPI_Wtime();
 
     loadMatrix("H.dat", nFull, H, desc, my_blacs_ctxt);
-    if(loglevel>0)
+    if( (loglevel>0 && myid==0) || loglevel>1)
     {
-        if(myid==0)
-        {
-            outlog.str("");
-            outlog<<"matrix H loaded"<<endl;
-            cout<<outlog.str();
-        }
-        if(loglevel>2) saveLocalMatrix("Loaded_H", narows, nacols, H);
+        outlog.str("");
+        outlog<<"matrix H loaded"<<endl;
+        cout<<outlog.str();
     }
+    if(loglevel>2) saveLocalMatrix("Loaded_H", narows, nacols, H);
 
     loadMatrix("S.dat", nFull, S, desc, my_blacs_ctxt);
-    if(loglevel>0)
+    if( (loglevel>0 && myid==0) || loglevel>1)
     {
-        if(myid==MPIROOT)
-        {
-            outlog.str("");
-            outlog<<"matrix S loaded"<<endl;
-            cout<<outlog.str();
-        }
-        if(loglevel>2) saveLocalMatrix("Loaded_S", narows, nacols, S);
+        outlog.str("");
+        outlog<<"matrix S loaded"<<endl;
+        cout<<outlog.str();
     }
+    if(loglevel>2) saveLocalMatrix("Loaded_S", narows, nacols, S);
     t1=MPI_Wtime();
 
-    if(loglevel>0)
+    if( (loglevel>0 && myid==0) || loglevel>1)
     {
         outlog.str("");
         outlog<<"myid "<<myid<<": load file time:"<<t1-t0<<"s"<<endl;
-        MPI_Barrier(MPI_COMM_WORLD);
-        usleep(myid*LOG_INTERVAL);
         cout<<outlog.str();
     }
 
@@ -141,50 +124,44 @@ int main(int argc, char** argv)
     es.setLoglevel(loglevel);
     int DecomposedState=0;
 
-    if(loglevel>0)
+    if( (loglevel>0 && myid==0) || loglevel>1)
     {
         outlog.str("");
         outlog<<"myid "<<myid<<": ELPA_Solver is created."<<endl;
-        MPI_Barrier(MPI_COMM_WORLD);
-        usleep(myid*LOG_INTERVAL);
         cout<<outlog.str();
     }
     // check elpa parameters
-    if(loglevel>1) es.outputParameters();
+    if( (loglevel>0 && myid==0) || loglevel>1) es.outputParameters();
 
     // start testing
     double maxError, meanError;
 
-    if(myid==MPIROOT)
+    if(myid==0)
     {
-        usleep(500);
         outlog.str("");
         outlog<<"Test eigenvector solver:"<<endl;
         cout<<outlog.str();
     }
-    t0=MPI_Wtime();
     Cdcopy(subMatrixSize, H, a);
-    if(loglevel>0)
+    if( (loglevel>0 && myid==0) || loglevel>1)
     {
         outlog.str("");
         outlog<<"myid "<<myid<<": input matrices are prepared, solver is running..."<<endl;
-        MPI_Barrier(MPI_COMM_WORLD);
-        usleep(myid*LOG_INTERVAL);
         cout<<outlog.str();
     }
+    MPI_Barrier(MPI_COMM_WORLD);
+    t0=MPI_Wtime();
     es.eigenvector(a, ev, q);
-    if(loglevel>0)
+    t1=MPI_Wtime();
+    if( (loglevel>0 && myid==0) || loglevel>1)
     {
         outlog.str("");
         outlog<<"myid "<<myid<<": a is solved"<<endl;
-        MPI_Barrier(MPI_COMM_WORLD);
-        usleep(myid*LOG_INTERVAL);
         cout<<outlog.str();
     }
-    t1=MPI_Wtime();
     // check result
     es.verify(H, ev, q, maxError, meanError);
-    if(myid==MPIROOT)
+    if(myid==0)
     {
         outlog.str("");
         outlog<<"eigenvector solving time:"<<t1-t0<<"s"<<endl;
@@ -205,37 +182,32 @@ int main(int argc, char** argv)
 
     for (int i=0; i<ntest; ++i)
     {
-        MPI_Barrier(MPI_COMM_WORLD);
-        t0=MPI_Wtime();
         Cdcopy(subMatrixSize, H, a);
         if(i==0)
         {
             DecomposedState=0;
             Cdcopy(subMatrixSize, S, b);
         }
-        if(loglevel>0)
+        if( (loglevel>0 && myid==0) || loglevel>1)
         {
-            MPI_Barrier(MPI_COMM_WORLD);
             outlog.str("");
             outlog<<"myid "<<myid<<": input matrices are prepared, solver is running..."<<endl;
-            MPI_Barrier(MPI_COMM_WORLD);
-            usleep(myid*LOG_INTERVAL);
             cout<<outlog.str();
         }
+        MPI_Barrier(MPI_COMM_WORLD);
+        t0=MPI_Wtime();
         es.generalized_eigenvector(a, b, DecomposedState, ev, q);
-        if(loglevel>0)
+        t1=MPI_Wtime();
+        if( (loglevel>0 && myid==0) || loglevel>1)
         {
             outlog.str("");
             outlog<<"myid "<<myid<<": solver is done..."<<endl;
-            MPI_Barrier(MPI_COMM_WORLD);
-            usleep(myid*LOG_INTERVAL);
             cout<<outlog.str();
         }
-        t1=MPI_Wtime();
-        if(myid==MPIROOT)
+        if(myid==0)
         {
             outlog.str("");
-            outlog<<"ntest: "<<i<<" solver time:"<<t1-t0<<"s"<<endl;
+            outlog<<"ntest: "<<i<<" solving time:"<<t1-t0<<"s"<<endl;
             cout<<outlog.str();
 
             outlog.str("");
@@ -248,7 +220,7 @@ int main(int argc, char** argv)
         // check result
         if(i==0) saveMatrix("eigenvector.dat", nFull, q, desc, my_blacs_ctxt);
         es.verify(H, S, ev, q, maxError, meanError);
-        if(myid==MPIROOT)
+        if(myid==0)
         {
             outlog.str("");
             outlog<<"ntest: "<<i<<" max error="<<maxError<<"; mean error="<<meanError<<endl;
@@ -262,7 +234,7 @@ int main(int argc, char** argv)
     delete[] a;
     delete[] b;
     delete[] q;
-    delete[] ev;    
+    delete[] ev;
     es.exit();
     Cblacs_gridexit(my_blacs_ctxt);
     MPI_Finalize();

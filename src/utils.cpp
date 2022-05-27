@@ -3,7 +3,6 @@
 #include <sstream>
 #include <iostream>
 #include <cstring>
-#include <unistd.h>
 #include <complex>
 #include "my_math.hpp"
 #include "utils.h"
@@ -26,29 +25,24 @@ void initBlacsGrid(int loglevel, MPI_Comm comm, int nFull, int nblk,
         if(nprocs%npcols==0) break;
     }
     nprows=nprocs/npcols;
-    if(loglevel>0)
+    if( (loglevel>0 && myid==0) || loglevel>1)
     {
         outlog.str("");
         outlog<<"myid "<<myid<<": nprows: "<<nprows<<" ; npcols: "<<npcols<<std::endl;
-        MPI_Barrier(comm);
-        usleep(myid*120);
         std::cout<<outlog.str();
-        MPI_Barrier(comm);
     }
 
     //int comm_f = MPI_Comm_c2f(comm);
     blacs_ctxt=Csys2blacs_handle(comm);
     Cblacs_gridinit(&blacs_ctxt, &BLACS_LAYOUT, nprows, npcols);
-    if(loglevel>0)
+    if( (loglevel>0 && myid==0) || loglevel>1)
     {
         outlog.str("");
         outlog<<"myid "<<myid<<": Cblacs_gridinit done, blacs_ctxt: "<<blacs_ctxt<<std::endl;
-        MPI_Barrier(comm);
-        usleep(myid*120);
         std::cout<<outlog.str();
     }
     Cblacs_gridinfo(blacs_ctxt, &nprows, &npcols, &myprow, &mypcol);
-    if(loglevel>0)
+    if( (loglevel>0 && myid==0) || loglevel>1)
     {
         int mypnum=Cblacs_pnum(blacs_ctxt, myprow, mypcol);
         int prow, pcol;
@@ -57,8 +51,6 @@ void initBlacsGrid(int loglevel, MPI_Comm comm, int nFull, int nblk,
         outlog<<"myid "<<myid<<": myprow: "<<myprow<<" ;mypcol: "<<mypcol<<std::endl;
         outlog<<"myid "<<myid<<": mypnum: "<<mypnum<<std::endl;
         outlog<<"myid "<<myid<<": prow: "<<prow<<" ;pcol: "<<pcol<<std::endl;
-        MPI_Barrier(comm);
-        usleep(myid*120);
         std::cout<<outlog.str();
     }
 
@@ -66,7 +58,7 @@ void initBlacsGrid(int loglevel, MPI_Comm comm, int nFull, int nblk,
     nacols=numroc_(&nFull, &nblk, &mypcol, &ISRCPROC, &npcols);
     descinit_(desc, &nFull, &nFull, &nblk, &nblk, &ISRCPROC, &ISRCPROC, &blacs_ctxt, &narows, &info);
 
-    if(loglevel>0)
+    if( (loglevel>0 && myid==0) || loglevel>1)
     {
         outlog.str("");
         outlog<<"myid "<<myid<<": narows: "<<narows<<" nacols: "<<nacols<<std::endl;
@@ -74,8 +66,6 @@ void initBlacsGrid(int loglevel, MPI_Comm comm, int nFull, int nblk,
         outlog<<"myid "<<myid<<": desc is: ";
         for(int i=0; i<9; ++i) outlog<<desc[i]<<" ";
         outlog<<std::endl;
-        MPI_Barrier(comm);
-        usleep(myid*120);
         std::cout<<outlog.str();
     }
 }

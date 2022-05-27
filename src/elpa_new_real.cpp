@@ -21,7 +21,18 @@ extern map<int, elpa_t> NEW_ELPA_HANDLE_POOL;
 int ELPA_Solver::eigenvector(double* A, double* EigenValue, double* EigenVector)
 {
     int info;
+    double t;
+
+    if(loglevel>0 && myid==0)
+    {
+        t=-1;
+        timer(myid, "elpa_eigenvectors_all_host_arrays_d", "1", t);
+    }
     elpa_eigenvectors_all_host_arrays_d(NEW_ELPA_HANDLE_POOL[handle_id], A, EigenValue, EigenVector, &info);
+    if(loglevel>0 && myid==0)
+    {
+        timer(myid, "elpa_eigenvectors_all_host_arrays_d", "1", t);
+    }
     return info;
 }
 
@@ -31,7 +42,7 @@ int ELPA_Solver::generalized_eigenvector(double* A, double* B, int& DecomposedSt
     int info, allinfo;
     double t;
 
-    if(loglevel>0)
+    if(loglevel>0 && myid==0)
     {
         std::stringstream outlog;
         outlog.str("");
@@ -39,13 +50,16 @@ int ELPA_Solver::generalized_eigenvector(double* A, double* B, int& DecomposedSt
         std::cout<<outlog.str();
     }
 
-    if(loglevel>0)
-        t=-1, timer(myid, "decomposeRightMatrix", "1", t);
+    if(loglevel>0 && myid==0)
+    {
+        t=-1;
+        timer(myid, "decomposeRightMatrix", "1", t);
+    }
     if(DecomposedState==0)
         allinfo=decomposeRightMatrix(B, EigenValue, EigenVector, DecomposedState);
     else
         allinfo=0;
-    if(loglevel>0)
+    if(loglevel>0 && myid==0)
     {
         timer(myid, "decomposeRightMatrix", "1", t);
     }
@@ -55,56 +69,56 @@ int ELPA_Solver::generalized_eigenvector(double* A, double* B, int& DecomposedSt
     if(DecomposedState == 1 || DecomposedState == 2)
     {
         // calculate A*U^-1, put to work
-        if(loglevel>0)
+        if(loglevel>1)
         {
             t=-1;
-            timer(myid, "pdgemm_", "2", t);
+            timer(myid, "A*U^-1", "2", t);
         }
         Cpdgemm('T', 'N', nFull, 1.0, A, B, 0.0, dwork, desc);
-        if(loglevel>0)
+        if(loglevel>1)
         {
-            timer(myid, "pdgemm_", "2", t);
+            timer(myid, "A*U^-1", "2", t);
         }
 
         // calculate U^-T^(A*U^-1), put to a
-        if(loglevel>0)
+        if(loglevel>1)
         {
             t=-1;
-            timer(myid, "pdgemm_", "3", t);
+            timer(myid, "U^-T^(A*U^-1)", "3", t);
         }
         Cpdgemm('T', 'N', nFull, 1.0, B, dwork, 0.0, A, desc);
-        if(loglevel>0)
+        if(loglevel>1)
         {
-            timer(myid, "pdgemm_", "3", t);
+            timer(myid, "U^-T^(A*U^-1)", "3", t);
         }
     }
     else
     {
-        // calculate b*a^T and put to work
-        if(loglevel>0)
+        // calculate B*A^T and put to work
+        if(loglevel>1)
         {
             t=-1;
-            timer(myid, "pdgemm_", "2", t);
+            timer(myid, "B*A^T", "2", t);
         }
         Cpdgemm('N', 'T', nFull, 1.0, B, A, 0.0, dwork, desc);
-        if(loglevel>0)
+        if(loglevel>1)
         {
-            timer(myid, "pdgemm_", "2", t);
+            timer(myid, "B*A^T", "2", t);
         }
-        // calculate b*work^T and put to a -- original A*x=v*B*x was transform to a*x'=v*x'
-        if(loglevel>0)
+        // calculate B*work^T = B*(B*A^T)^T and put to A -- original A*x=v*B*x was transform to a*x'=v*x'
+        if(loglevel>1)
         {
             t=-1;
-            timer(myid, "pdgemm_", "3", t);
+            timer(myid, "B*work^T = B*(B*A^T)^T", "3", t);
         }
         Cpdgemm('N', 'T', nFull, 1.0, B, dwork, 0.0, A, desc);
-        if(loglevel>0)
+        if(loglevel>1)
         {
-            timer(myid, "pdgemm_", "3", t);
+            timer(myid, "B*work^T = B*(B*A^T)^T", "3", t);
         }
     }
 
-    if(loglevel>0)
+    if(loglevel>0 && myid==0)
     {
         /*const int naloc=narows*nacols;
         Cdcopy(naloc, A, dwork);
@@ -119,13 +133,13 @@ int ELPA_Solver::generalized_eigenvector(double* A, double* B, int& DecomposedSt
     //elpa_eigenvectors_all_host_arrays_d(NEW_ELPA_HANDLE_POOL[handle_id], A, EigenValue, EigenVector, &info);
     info=eigenvector(A, EigenValue, EigenVector);
 
-    if(loglevel>0)
+    if(loglevel>0 && myid==0)
     {
         timer(myid, "elpa_eigenvectors", "2", t);
     }
 
     MPI_Allreduce(&info, &allinfo, 1, MPI_INT, MPI_MAX, comm);
-    if(loglevel>0)
+    if(loglevel>0 && myid==0)
     {
         t=-1;
         timer(myid, "composeEigenVector", "3", t);
@@ -133,7 +147,7 @@ int ELPA_Solver::generalized_eigenvector(double* A, double* B, int& DecomposedSt
 
     if(loglevel>2) saveMatrix("EigenVector_tilde.dat", nFull, EigenVector, desc, cblacs_ctxt);
     allinfo=composeEigenVector(DecomposedState, B, EigenVector);
-    if(loglevel>0)
+    if(loglevel>0 && myid==0)
     {
         timer(myid, "composeEigenVector", "3", t);
     }
@@ -156,45 +170,120 @@ int ELPA_Solver::decomposeRightMatrix(double* B, double* EigenValue, double* Eig
 {
     int info=0;
     int allinfo=0;
-    if(loglevel>0)
-    {
-        std::stringstream outlog;
-        outlog.str("");
-        outlog<<"DEBUG: Process "<<myid<<" Enter decomposeRightMatrix"<<std::endl;
-        MPI_Barrier(MPI_COMM_WORLD);
-        std::cout<<outlog.str();
-    }
+    double t;
+
     // first try cholesky decomposing
     if(nFull<CHOLESKY_CRITICAL_SIZE)
     {
         DecomposedState=1;
+        if(loglevel>1)
+        {
+            t=-1;
+            timer(myid, "pdpotrf_", "1", t);
+        }
         info=Cpdpotrf('U', nFull, B, desc);
+        if(loglevel>1)
+        {
+            timer(myid, "pdpotrf_", "1", t);
+        }
         MPI_Allreduce(&info, &allinfo, 1, MPI_INT, MPI_MAX, comm);
         if(allinfo != 0) //pdpotrf fail, try elpa_cholesky_real
         {
             DecomposedState=2;
+            if(loglevel>1)
+            {
+                t=-1;
+                timer(myid, "elpa_cholesky_d", "2", t);
+            }
             elpa_cholesky_d(NEW_ELPA_HANDLE_POOL[handle_id], B, &info);
+            if(loglevel>1)
+            {
+                timer(myid, "elpa_cholesky_d", "2", t);
+            }
             MPI_Allreduce(&info, &allinfo, 1, MPI_INT, MPI_MAX, comm);
         }
     } else
     {
         DecomposedState=2;
+        if(loglevel>1)
+        {
+            t=-1;
+            timer(myid, "elpa_cholesky_d", "1", t);
+        }
         elpa_cholesky_d(NEW_ELPA_HANDLE_POOL[handle_id], B, &info);
+        if(loglevel>1)
+        {
+            timer(myid, "elpa_cholesky_d", "1", t);
+        }
         MPI_Allreduce(&info, &allinfo, 1, MPI_INT, MPI_MAX, comm);
         if(allinfo != 0)
         {
             DecomposedState=1;
+            if(loglevel>1)
+            {
+                t=-1;
+                timer(myid, "pdpotrf_", "2", t);
+            }
             info=Cpdpotrf('U', nFull, B, desc);
+            if(loglevel>1)
+            {
+                timer(myid, "pdpotrf_", "2", t);
+            }
             MPI_Allreduce(&info, &allinfo, 1, MPI_INT, MPI_MAX, comm);
         }
     }
 
-    if(allinfo!=0) // if cholesky decomposing failed, try diagonalize
+    if(allinfo==0) // calculate U^{-1}
     {
-        DecomposedState=3;
-        elpa_eigenvectors_all_host_arrays_d(NEW_ELPA_HANDLE_POOL[handle_id], B, EigenValue, EigenVector, &info);
-        MPI_Allreduce(&info, &allinfo, 1, MPI_INT, MPI_MAX, comm);
+        // clear low triangle
+        if(loglevel>1)
+        {
+            t=-1;
+            timer(myid, "clear low triangle", "1", t);
+        }
+        for(int j=0; j<nacols; ++j)
+        {
+            int jGlobal=globalIndex(j, nblk, npcols, mypcol);
+            for(int i=0; i<narows; ++i)
+            {
+                int iGlobal=globalIndex(i, nblk, nprows, myprow);
+                if(iGlobal>jGlobal) B[i+j*narows]=0;
+            }
+        }
+        if(loglevel>1)
+        {
+            timer(myid, "clear low triangle", "1", t);
+        }
+        if(loglevel>2) saveMatrix("U.dat", nFull, B, desc, cblacs_ctxt);
+        // calculate the inverse U^{-1}
+        if(loglevel>1)
+        {
+            t=-1;
+            timer(myid, "invert U", "1", t);
+        }
+        elpa_invert_trm_d(NEW_ELPA_HANDLE_POOL[handle_id], B, &info);
+        if(loglevel>1)
+        {
+            timer(myid, "invert U", "1", t);
+        }
+        if(loglevel>2) saveMatrix("U_inv.dat", nFull, B, desc, cblacs_ctxt);
+    }
+    else {
+        // if cholesky decomposing failed, try diagonalize
         // calculate B^{-1/2}_{i,j}=\sum_k q_{i,k}*ev_k^{-1/2}*q_{j,k} and put to b, which will be b^-1/2
+        DecomposedState=3;
+        if(loglevel>1)
+        {
+            t=-1;
+            timer(myid, "calculate eigenvalue and eigenvector of B", "1", t);
+        }
+        elpa_eigenvectors_all_host_arrays_d(NEW_ELPA_HANDLE_POOL[handle_id], B, EigenValue, EigenVector, &info);
+        if(loglevel>1)
+        {
+            timer(myid, "calculate eigenvalue and eigenvector of B", "1", t);
+        }
+        MPI_Allreduce(&info, &allinfo, 1, MPI_INT, MPI_MAX, comm);
+
         // calculate q*ev^{-1/2} and put to work
         for(int i=0; i<nacols; ++i)
         {
@@ -206,44 +295,49 @@ int ELPA_Solver::decomposeRightMatrix(double* B, double* EigenValue, double* Eig
         }
 
         // calculate work*q=q*ev^{-1/2}*q^T, put to b, which is B^{-1/2}
-        char transa='N', transb='T';
-        double alpha=1.0, beta=0.0;
-        int isrc=1, jsrc=1;
-        pdgemm_(&transa, &transb, &nFull, &nFull, &nFull,
-                &alpha, dwork,          &isrc, &jsrc, desc,
-                        EigenVector,    &isrc, &jsrc, desc,
-                &beta,  B,              &isrc, &jsrc, desc);
-    }
-    else // calculate U^{-1}
-    {
-        // clear low triangle
-        for(int j=0; j<nacols; ++j)
+        if(loglevel>1)
         {
-            int jGlobal=globalIndex(j, nblk, npcols, mypcol);
-            for(int i=0; i<narows; ++i)
-            {
-                int iGlobal=globalIndex(i, nblk, nprows, myprow);
-                if(iGlobal>jGlobal) B[i+j*narows]=0;
-            }
+            t=-1;
+            timer(myid, "qevq=qev*q^T", "2", t);
         }
-        if(loglevel>2) saveMatrix("U.dat", nFull, B, desc, cblacs_ctxt);
-        // calculate the inverse U^{-1}
-        elpa_invert_trm_d(NEW_ELPA_HANDLE_POOL[handle_id], B, &info);
-        if(loglevel>2) saveMatrix("U_inv.dat", nFull, B, desc, cblacs_ctxt);
+        Cpdgemm('N',  'T', nFull, 1.0, dwork, EigenVector, 0.0, B, desc);
+        if(loglevel>1)
+        {
+            timer(myid, "qevq=qev*q^T", "2", t);
+        }
     }
     return allinfo;
 }
 
 int ELPA_Solver::composeEigenVector(int DecomposedState, double* B, double* EigenVector)
 {
+    double t;
     if(DecomposedState==1 || DecomposedState==2)
     {
         // transform the eigenvectors to original general equation, let U^-1*q, and put to q
+        if(loglevel>1)
+        {
+            t=-1;
+            timer(myid, "Cpdtrmm", "1", t);
+        }
         Cpdtrmm('L', 'U', 'N', 'N', nFull, 1.0, B, EigenVector, desc);
+        if(loglevel>1)
+        {
+            timer(myid, "Cpdtrmm", "1", t);
+        }
     } else
     {
         // transform the eigenvectors to original general equation, let b^T*q, and put to q
+        if(loglevel>1)
+        {
+            t=-1;
+            timer(myid, "Cpdgemm", "1", t);
+        }
         Cpdgemm('T', 'N', nFull, 1.0, B, dwork, 0.0, EigenVector, desc);
+        if(loglevel>1)
+        {
+            timer(myid, "Cpdgemm", "1", t);
+        }
     }
     return 0;
 }
