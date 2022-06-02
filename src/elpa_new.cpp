@@ -71,7 +71,7 @@ ELPA_Solver::ELPA_Solver(bool isReal, MPI_Comm comm, int nev,
     if(isReal)
         elpa_set_integer(NEW_ELPA_HANDLE_POOL[handle_id], "real_kernel", kernel_id, &error);
     else
-        elpa_set_integer(NEW_ELPA_HANDLE_POOL[handle_id], "real_kernel", kernel_id, &error);
+        elpa_set_integer(NEW_ELPA_HANDLE_POOL[handle_id], "complex_kernel", kernel_id, &error);
 }
 
 ELPA_Solver::ELPA_Solver(bool isReal, MPI_Comm comm, int nev,
@@ -117,15 +117,11 @@ ELPA_Solver::ELPA_Solver(bool isReal, MPI_Comm comm, int nev,
     elpa_set_integer(NEW_ELPA_HANDLE_POOL[handle_id], "blacs_context", cblacs_ctxt, &error);
     elpa_set_integer(NEW_ELPA_HANDLE_POOL[handle_id], "solver", ELPA_SOLVER_2STAGE, &error);
     elpa_set_integer(NEW_ELPA_HANDLE_POOL[handle_id], "debug", wantDebug, &error);
+    elpa_set_integer(NEW_ELPA_HANDLE_POOL[handle_id], "qr", useQR, &error);
     if(isReal)
-    {
         elpa_set_integer(NEW_ELPA_HANDLE_POOL[handle_id], "real_kernel", kernel_id, &error);
-        elpa_set_integer(NEW_ELPA_HANDLE_POOL[handle_id], "qr", useQR, &error);
-    }
     else
-    {
         elpa_set_integer(NEW_ELPA_HANDLE_POOL[handle_id], "complex_kernel", kernel_id, &error);
-    }
 }
 
 void ELPA_Solver::setLoglevel(int loglevel)
@@ -142,17 +138,23 @@ void ELPA_Solver::setLoglevel(int loglevel)
     }
 }
 
-void ELPA_Solver::setKernel(int kernel)
+void ELPA_Solver::setKernel(bool isReal, int kernel)
 {
     int error;
-    elpa_set_integer(NEW_ELPA_HANDLE_POOL[handle_id], "real_kernel", kernel, &error);
+    if(isReal)
+        elpa_set_integer(NEW_ELPA_HANDLE_POOL[handle_id], "real_kernel", kernel_id, &error);
+    else
+        elpa_set_integer(NEW_ELPA_HANDLE_POOL[handle_id], "complex_kernel", kernel_id, &error);
 }
 
-void ELPA_Solver::setKernel(int kernel, int useQR)
+void ELPA_Solver::setKernel(bool isReal, int kernel, int useQR)
 {
     int error;
-    elpa_set_integer(NEW_ELPA_HANDLE_POOL[handle_id], "real_kernel", kernel, &error);
     elpa_set_integer(NEW_ELPA_HANDLE_POOL[handle_id], "qr", useQR, &error);
+    if(isReal)
+        elpa_set_integer(NEW_ELPA_HANDLE_POOL[handle_id], "real_kernel", kernel_id, &error);
+    else
+        elpa_set_integer(NEW_ELPA_HANDLE_POOL[handle_id], "complex_kernel", kernel_id, &error);
 }
 
 void ELPA_Solver::exit()
