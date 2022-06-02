@@ -17,6 +17,7 @@
 ELPA_Solver::ELPA_Solver(bool isReal, MPI_Comm comm, int nev,
                          int narows, int nacols, int* desc)
 {
+	this->isReal=isReal;
     this->comm=comm;
     this->nev=nev;
     this->narows=narows;
@@ -48,6 +49,7 @@ ELPA_Solver::ELPA_Solver(bool isReal, MPI_Comm comm, int nev,
 ELPA_Solver::ELPA_Solver(bool isReal, MPI_Comm comm, int nev,
                          int narows, int nacols, int* desc, int* otherParameter)
 {
+	this->isReal=isReal;
     this->comm=comm;
     this->nev=nev;
     this->narows=narows;
@@ -246,7 +248,7 @@ int ELPA_Solver::read_complex_kernel()
     return kernel_id;
 }
 
-int ELPA_Solver::allocate_work(bool isReal)
+int ELPA_Solver::allocate_work()
 {
     unsigned long nloc=narows*nacols; // local size
     unsigned long maxloc; // maximum local size

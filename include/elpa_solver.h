@@ -30,6 +30,7 @@ class ELPA_Solver
 
     private:
     const int  CHOLESKY_CRITICAL_SIZE=1000;
+    bool isReal;
     MPI_Comm comm;
     int nFull;
     int nev;
@@ -57,7 +58,7 @@ class ELPA_Solver
     int mpi_comm_cols;
     // for new elpa handle
     int handle_id;
-
+    
     // toolbox
     int read_cpuflag();
     int read_real_kernel();

@@ -93,8 +93,6 @@ int main(int argc, char** argv)
     for(int i=0; i<nFull; ++i) ev[i]=0;
 
     //load input matrices and distribute to all processes
-
-	strcpy(filename,"H.dat");
     loadMatrix("H.dat", nFull, H, desc, my_blacs_ctxt);
     if( (loglevel>0 && myid==0) || loglevel>1)
     {
