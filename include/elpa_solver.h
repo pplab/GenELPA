@@ -14,8 +14,8 @@ class ELPA_Solver
     int generalized_eigenvector(complex<double>* A, complex<double>* B, int& DecomposedState,
                                 double* EigenValue, complex<double>* EigenVector);
     void setLoglevel(int loglevel);
-    void setKernel(int Kernel);
-    void setKernel(int Kernel, int useQR);
+    void setKernel(bool isReal, int Kernel);
+    void setKernel(bool isReal, int Kernel, int useQR);
     void outputParameters();
     void verify(double* A, double* EigenValue, double* EigenVector,
                 double &maxRemain, double &meanRemain);
