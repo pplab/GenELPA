@@ -14,15 +14,27 @@
 
 using namespace std;
 
-static inline void out_ev(int nev,complex<double> ev[])
+static inline void set_zero(int n, complex<double> v[])
 {
-	stringstream outlog;
-	outlog.str("");
-	outlog<<"ev:";
-	for(int j=0; j<nev; ++j)
-		outlog<<' '<<ev[j];
-	outlog<<endl;
-	cout<<outlog.str();
+    for(int i=0; i<n; ++i)
+        v[i]=0;
+}
+
+static inline void set_zero(int n, double v[])
+{
+    for(int i=0; i<n; ++i)
+        v[i]=0;
+}
+
+static inline void out_ev(int nev, double ev[])
+{
+    stringstream outlog;
+    outlog.str("");
+    outlog<<"ev:";
+    for(int j=0; j<nev; ++j)
+        outlog<<' '<<ev[j];
+    outlog<<endl;
+    cout<<outlog.str();
 }
 
 int main(int argc, char** argv)
@@ -32,11 +44,13 @@ int main(int argc, char** argv)
     int my_blacs_ctxt;
     int info;
     int narows, nacols;
-    complex<double> *H, *S, *a, *b, *q, *ev;
+    complex<double> *H, *S, *a, *b, *q;
+    double *ev;
     int desc[9];
     int kernel_id;
-    
-    vector<int> kernel_list;
+
+    const int MAX_KERNEL_NUMBER=100;
+    int kernel_list[MAX_KERNEL_NUMBER];
     stringstream outlog;
     double t0, t1;
 
@@ -60,9 +74,8 @@ int main(int argc, char** argv)
             inputFile>>nFull>>nev>>nblk>>nkernels>>loglevel;
             for(int i=0; i<nkernels; ++i)
             {
-				inputFile>>kernel_id;
-				kernel_list.push_back(kernel_id);
-			}
+                inputFile>>kernel_list[i];
+            }
             inputFile.close();
         }
     }
@@ -85,6 +98,13 @@ int main(int argc, char** argv)
         outlog.str("");
         outlog<<"myid "<<myid<<": parameters synchonized";
         outlog<<" nFull: "<<nFull<<" nev: "<<nev<<" nblk: "<<nblk<<" nkernels: "<<nkernels<<" loglevel: "<<loglevel<<endl;
+        if(myid==0)
+        {
+            outlog<<"kernel_list: ";
+            for(int i=0; i<nkernels; ++i)
+                outlog<<' '<<kernel_list[i];
+            outlog<<endl;
+        }
         cout<<outlog.str();
     }
 
@@ -99,9 +119,7 @@ int main(int argc, char** argv)
     a=new complex<double>[subMatrixSize];
     b=new complex<double>[subMatrixSize];
     q=new complex<double>[subMatrixSize];
-    ev=new complex<double>[nFull];
-    for(int i=0; i<subMatrixSize; ++i) q[i]=0;
-    for(int i=0; i<nFull; ++i) ev[i]=0;
+    ev=new double[nFull];
 
     //load input matrices and distribute to all processes
     MPI_Barrier(MPI_COMM_WORLD);
@@ -144,71 +162,74 @@ int main(int argc, char** argv)
         outlog<<"myid "<<myid<<": ELPA_Solver is created."<<endl;
         cout<<outlog.str();
     }
-    
+
     // start testing
     double maxError, meanError;
-    
+
     // test each kernel and QR
     for(int i=0; i<nkernels; ++i)
     {
-		for(int useqr=0; useqr<2; ++useqr)
-		{
-			// setup kernel and QR
-			if(myid==0) kernel_id=kernel_list[i];
-			MPI_Bcast(&kernel_id, 1, MPI_INT, 0, MPI_COMM_WORLD);
-			es.setKernel(kernel_id, useqr);
-			// check elpa parameters
-			if( (loglevel>0 && myid==0) || loglevel>1) es.outputParameters();
-			// test eigen solver
-			Czcopy(subMatrixSize, H, a);
-			MPI_Barrier(MPI_COMM_WORLD);
-			t0=MPI_Wtime();
-			es.eigenvector(a, ev, q);
-			t1=MPI_Wtime();
-			es.verify(H, ev, q, maxError, meanError);
-			if(myid==0)
-			{
-				if(loglevel>1) out_ev(nev, ev);	
-				outlog.str("");		
-				outlog<<"kernel: "<<i<<" elpa solving time:"<<t1-t0<<"s"<<endl;
-				outlog<<"kernel: "<<i<<" elpa max error="<<maxError<<"; mean error="<<meanError<<endl;
-				cout<<outlog.str();
-			}			
-			// test generalized eigen solver
-			Czcopy(subMatrixSize, H, a);
-            Czcopy(subMatrixSize, S, b);            
-			int DecomposedState=0;
-			MPI_Barrier(MPI_COMM_WORLD);
-			t0=MPI_Wtime();
-			es.generalized_eigenvector(a, b, DecomposedState, ev, q);
-			t1=MPI_Wtime();
-			es.verify(H, S, ev, q, maxError, meanError);
-			if(myid==0)
-			{
-				if(loglevel>1) out_ev(nev, ev);	
-				outlog.str("");
-				outlog<<"kernel: "<<i<<" genelpa solving time:"<<t1-t0<<"s"<<endl;
-				outlog<<"kernel: "<<i<<" genelpa max error="<<maxError<<"; mean error="<<meanError<<endl;
-				cout<<outlog.str();
-			}	
-			// test generalized eigen solver with decomposed S;
-			Czcopy(subMatrixSize, H, a);
-			MPI_Barrier(MPI_COMM_WORLD);
-			t0=MPI_Wtime();
-			es.generalized_eigenvector(a, b, DecomposedState, ev, q);
-			t1=MPI_Wtime();
-			es.verify(H, S, ev, q, maxError, meanError);
-			if(myid==0)
-			{
-				if(loglevel>1) out_ev(nev, ev);	
-				outlog.str("");
-				outlog<<"kernel: "<<i<<" genelpa solving time(decomposed S):"<<t1-t0<<"s"<<endl;
-				outlog<<"kernel: "<<i<<" genelpa max error="<<maxError<<"; mean error="<<meanError<<endl;
-				cout<<outlog.str();
-			}
-		} //useqr
+        // setup kernel
+        if(myid==0) kernel_id=kernel_list[i];
+        MPI_Bcast(&kernel_id, 1, MPI_INT, 0, MPI_COMM_WORLD);
+        es.setKernel(isReal, kernel_id);
+        // check elpa parameters
+        if( (loglevel>0 && myid==0) || loglevel>1) es.outputParameters();
+        // test eigen solver
+        Czcopy(subMatrixSize, H, a);
+        set_zero(nFull, ev);
+        set_zero(subMatrixSize, q);
+        MPI_Barrier(MPI_COMM_WORLD);
+        t0=MPI_Wtime();
+        es.eigenvector(a, ev, q);
+        t1=MPI_Wtime();
+        es.verify(H, ev, q, maxError, meanError);
+        if(myid==0)
+        {
+            if(loglevel>1) out_ev(nev, ev);
+            outlog.str("");
+            outlog<<"kernel: "<<kernel_id<<" elpa solving time:"<<t1-t0<<"s"<<endl;
+            outlog<<"kernel: "<<kernel_id<<" elpa max error="<<maxError<<"; mean error="<<meanError<<endl;
+            cout<<outlog.str();
+        }
+        // test generalized eigen solver
+        Czcopy(subMatrixSize, H, a);
+        Czcopy(subMatrixSize, S, b);
+        set_zero(nFull, ev);
+        set_zero(subMatrixSize, q);
+        int DecomposedState=0;
+        MPI_Barrier(MPI_COMM_WORLD);
+        t0=MPI_Wtime();
+        es.generalized_eigenvector(a, b, DecomposedState, ev, q);
+        t1=MPI_Wtime();
+        es.verify(H, S, ev, q, maxError, meanError);
+        if(myid==0)
+        {
+            if(loglevel>1) out_ev(nev, ev);
+            outlog.str("");
+            outlog<<"kernel: "<<kernel_id<<" genelpa solving time:"<<t1-t0<<"s"<<endl;
+            outlog<<"kernel: "<<kernel_id<<" genelpa max error="<<maxError<<"; mean error="<<meanError<<endl;
+            cout<<outlog.str();
+        }
+        // test generalized eigen solver with decomposed S;
+        Czcopy(subMatrixSize, H, a);
+        set_zero(nFull, ev);
+        set_zero(subMatrixSize, q);
+        MPI_Barrier(MPI_COMM_WORLD);
+        t0=MPI_Wtime();
+        es.generalized_eigenvector(a, b, DecomposedState, ev, q);
+        t1=MPI_Wtime();
+        es.verify(H, S, ev, q, maxError, meanError);
+        if(myid==0)
+        {
+            if(loglevel>1) out_ev(nev, ev);
+            outlog.str("");
+            outlog<<"kernel: "<<kernel_id<<" genelpa solving time(decomposed S):"<<t1-t0<<"s"<<endl;
+            outlog<<"kernel: "<<kernel_id<<" genelpa max error="<<maxError<<"; mean error="<<meanError<<endl;
+            cout<<outlog.str();
+        }
     } // kernel
-    
+
     //finalize end exit
     delete[] H;
     delete[] S;

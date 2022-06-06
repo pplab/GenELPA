@@ -15,7 +15,7 @@ class ELPA_Solver
                                 double* EigenValue, complex<double>* EigenVector);
     void setLoglevel(int loglevel);
     void setKernel(bool isReal, int Kernel);
-    void setKernel(bool isReal, int Kernel, int useQR);
+    void setQR(int useQR);
     void outputParameters();
     void verify(double* A, double* EigenValue, double* EigenVector,
                 double &maxRemain, double &meanRemain);

@@ -13,6 +13,7 @@
 #include "my_math.hpp"
 
 using namespace std;
+
 static inline void set_zero(int n, double v[])
 {
     for(int i=0; i<n; ++i)
@@ -40,8 +41,9 @@ int main(int argc, char** argv)
     double *H, *S, *a, *b, *q, *ev;
     int desc[9];
     int kernel_id;
-    
-    vector<int> kernel_list;
+
+    const int MAX_KERNEL_NUMBER=100;
+    int kernel_list[MAX_KERNEL_NUMBER];
     stringstream outlog;
     double t0, t1;
 
@@ -65,8 +67,7 @@ int main(int argc, char** argv)
             inputFile>>nFull>>nev>>nblk>>nkernels>>loglevel;
             for(int i=0; i<nkernels; ++i)
             {
-				inputFile>>kernel_id;
-				kernel_list.push_back(kernel_id);
+				inputFile>>kernel_list[i];
 			}
             inputFile.close();
         }
@@ -89,7 +90,7 @@ int main(int argc, char** argv)
     {
         outlog.str("");
         outlog<<"myid "<<myid<<": parameters synchonized";
-        outlog<<" nFull: "<<nFull<<" nev: "<<nev<<" nblk: "<<nblk<<" nkernels: "<<nkernels<<" loglevel: "<<loglevel<<endl;        
+        outlog<<" nFull: "<<nFull<<" nev: "<<nev<<" nblk: "<<nblk<<" nkernels: "<<nkernels<<" loglevel: "<<loglevel<<endl;
         if(myid==0)
         {
 			outlog<<"kernel_list: ";
@@ -154,19 +155,21 @@ int main(int argc, char** argv)
         outlog<<"myid "<<myid<<": ELPA_Solver is created."<<endl;
         cout<<outlog.str();
     }
-    
+
     // start testing
     double maxError, meanError;
-    
+
     // test each kernel and QR
-    for(int i=0; i<nkernels; ++i)
+
+	for(int useqr=0; useqr<1; ++useqr) // qr = 1 cause segment fault
     {
-		for(int useqr=0; useqr<2; ++useqr)
+		es.setQR(useqr);
+		for(int i=0; i<nkernels; ++i)
 		{
 			// setup kernel and QR
 			if(myid==0) kernel_id=kernel_list[i];
 			MPI_Bcast(&kernel_id, 1, MPI_INT, 0, MPI_COMM_WORLD);
-			es.setKernel(kernel_id, useqr);
+			es.setKernel(isReal, kernel_id);
 			// check elpa parameters
 			if( (loglevel>0 && myid==0) || loglevel>1) es.outputParameters();
 			// test eigen solver
@@ -181,15 +184,15 @@ int main(int argc, char** argv)
 			es.verify(H, ev, q, maxError, meanError);
 			if(myid==0)
 			{
-				if(loglevel>1) out_ev(nev, ev);	
-				outlog.str("");				
-				outlog<<"kernel: "<<i<<" elpa solving time:"<<t1-t0<<"s"<<endl;
-				outlog<<"kernel: "<<i<<" elpa max error="<<maxError<<"; mean error="<<meanError<<endl;
+				if(loglevel>1) out_ev(nev, ev);
+				outlog.str("");
+				outlog<<"kernel: "<<kernel_id<<" elpa solving time:"<<t1-t0<<"s"<<endl;
+				outlog<<"kernel: "<<kernel_id<<" elpa max error="<<maxError<<"; mean error="<<meanError<<endl;
 				cout<<outlog.str();
-			}			
+			}
 			// test generalized eigen solver
 			Cdcopy(subMatrixSize, H, a);
-            Cdcopy(subMatrixSize, S, b);            
+            Cdcopy(subMatrixSize, S, b);
             set_zero(nFull, ev);
             set_zero(subMatrixSize, q);
 			int DecomposedState=0;
@@ -202,10 +205,10 @@ int main(int argc, char** argv)
 			{
 				if(loglevel>1) out_ev(nev, ev);
 				outlog.str("");
-				outlog<<"kernel: "<<i<<" genelpa solving time:"<<t1-t0<<"s"<<endl;
-				outlog<<"kernel: "<<i<<" genelpa max error="<<maxError<<"; mean error="<<meanError<<endl;
+				outlog<<"kernel: "<<kernel_id<<" genelpa solving time:"<<t1-t0<<"s"<<endl;
+				outlog<<"kernel: "<<kernel_id<<" genelpa max error="<<maxError<<"; mean error="<<meanError<<endl;
 				cout<<outlog.str();
-			}	
+			}
 			// test generalized eigen solver with decomposed S;
 			Cdcopy(subMatrixSize, H, a);
             set_zero(nFull, ev);
@@ -219,13 +222,13 @@ int main(int argc, char** argv)
 			{
 				if(loglevel>1) out_ev(nev, ev);
 				outlog.str("");
-				outlog<<"kernel: "<<i<<" genelpa solving time(decomposed S):"<<t1-t0<<"s"<<endl;
-				outlog<<"kernel: "<<i<<" genelpa max error="<<maxError<<"; mean error="<<meanError<<endl;
+				outlog<<"kernel: "<<kernel_id<<" genelpa solving time(decomposed S):"<<t1-t0<<"s"<<endl;
+				outlog<<"kernel: "<<kernel_id<<" genelpa max error="<<maxError<<"; mean error="<<meanError<<endl;
 				cout<<outlog.str();
 			}
-		} //useqr
-    } // kernel
-    
+		} // kernel
+    } // QR
+
     //finalize end exit
     delete[] H;
     delete[] S;

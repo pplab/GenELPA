@@ -17,10 +17,10 @@ bin/benchmark_double_legacy: benchmark_double.o lib/libelpa_legacy.so
 	${MPICXX} benchmark_double.o ${FLAGS} ${LIBS_legacy} ${LIBS} -o bin/benchmark_double_legacy
 
 bin/benchmark_complex_new: benchmark_complex.o lib/libelpa_new.so
-	${MPICXX} benchmark_complex.o ${FLAGS} ${LIBS_new} ${LIBS} -o bin/test_complex_new
+	${MPICXX} benchmark_complex.o ${FLAGS} ${LIBS_new} ${LIBS} -o bin/benchmark_complex_new
 
 bin/benchmark_complex_legacy: benchmark_complex.o lib/libelpa_legacy.so
-	${MPICXX} benchmark_complex.o ${FLAGS} ${LIBS_legacy} ${LIBS} -o bin/test_complex_legacy
+	${MPICXX} benchmark_complex.o ${FLAGS} ${LIBS_legacy} ${LIBS} -o bin/benchmark_complex_legacy
 
 benchmark_double.o: src/benchmark_double.cpp
 	${MPICXX} ${FLAGS} ${INCLUDE} -c src/benchmark_double.cpp
