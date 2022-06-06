@@ -287,16 +287,16 @@ int ELPA_Solver::read_real_kernel()
         switch (cpuflag)
         {
             case 4:
-                kernel_id=ELPA_2STAGE_REAL_AVX512_BLOCK6;
+                kernel_id=ELPA_2STAGE_REAL_AVX512_BLOCK4;
                 break;
             case 3:
-                kernel_id=ELPA_2STAGE_REAL_AVX2_BLOCK6;
+                kernel_id=ELPA_2STAGE_REAL_AVX2_BLOCK2;
                 break;
             case 2:
-                kernel_id=ELPA_2STAGE_REAL_AVX_BLOCK6;
+                kernel_id=ELPA_2STAGE_REAL_AVX_BLOCK2;
                 break;
             case 1:
-                kernel_id=ELPA_2STAGE_REAL_SSE_BLOCK6;
+                kernel_id=ELPA_2STAGE_REAL_SSE_BLOCK2;
                 break;
             default:
                 kernel_id=ELPA_2STAGE_REAL_GENERIC_SIMPLE_BLOCK6;
@@ -366,7 +366,7 @@ int ELPA_Solver::read_complex_kernel()
         switch (cpuflag)
         {
             case 4:
-                kernel_id=ELPA_2STAGE_COMPLEX_AVX512_BLOCK2;
+                kernel_id=ELPA_2STAGE_COMPLEX_AVX512_BLOCK4;
                 break;
             case 3:
                 kernel_id=ELPA_2STAGE_COMPLEX_AVX2_BLOCK2;

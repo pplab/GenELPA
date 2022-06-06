@@ -172,13 +172,13 @@ int ELPA_Solver::read_real_kernel()
         {
             case 4:
             case 3:
-                kernel_id=ELPA2_REAL_KERNEL_AVX2_BLOCK6;
+                kernel_id=ELPA2_REAL_KERNEL_AVX2_BLOCK2;
                 break;
             case 2:
-                kernel_id=ELPA2_REAL_KERNEL_AVX_BLOCK6;
+                kernel_id=ELPA2_REAL_KERNEL_AVX_BLOCK2;
                 break;
             case 1:
-                kernel_id=ELPA2_REAL_KERNEL_SSE_BLOCK6;
+                kernel_id=ELPA2_REAL_KERNEL_SSE_BLOCK2;
                 break;
             default:
                 kernel_id=ELPA2_REAL_KERNEL_GENERIC;
@@ -223,13 +223,13 @@ int ELPA_Solver::read_complex_kernel()
         {
             case 4:
             case 3:
-                kernel_id=ELPA2_COMPLEX_KERNEL_AVX2_BLOCK2;
+                kernel_id=ELPA2_COMPLEX_KERNEL_AVX2_BLOCK1;
                 break;
             case 2:
-                kernel_id=ELPA2_COMPLEX_KERNEL_AVX_BLOCK2;
+                kernel_id=ELPA2_COMPLEX_KERNEL_AVX_BLOCK1;
                 break;
             case 1:
-                kernel_id=ELPA2_COMPLEX_KERNEL_SSE_BLOCK2;
+                kernel_id=ELPA_2STAGE_COMPLEX_SSE_ASSEMBLY;
                 break;
             default:
                 kernel_id=ELPA2_COMPLEX_KERNEL_GENERIC;
