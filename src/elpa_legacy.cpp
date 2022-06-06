@@ -35,7 +35,7 @@ ELPA_Solver::ELPA_Solver(bool isReal, MPI_Comm comm, int nev,
     Cblacs_gridinfo(cblacs_ctxt, &nprows, &npcols, &myprow, &mypcol);
     comm_f=MPI_Comm_c2f(comm);
     elpa_get_communicators(comm_f, myprow, mypcol, &mpi_comm_rows, &mpi_comm_cols);
-    allocate_work(isReal);
+    allocate_work();
     if(isReal)
     {
         kernel_id=read_real_kernel();
@@ -66,14 +66,7 @@ ELPA_Solver::ELPA_Solver(bool isReal, MPI_Comm comm, int nev,
     Cblacs_gridinfo(cblacs_ctxt, &nprows, &npcols, &myprow, &mypcol);
     comm_f=MPI_Comm_c2f(comm);
     elpa_get_communicators(comm_f, myprow, mypcol, &mpi_comm_rows, &mpi_comm_cols);
-    allocate_work(isReal);
-    if(isReal)
-    {
-        kernel_id=read_real_kernel();
-    } else
-    {
-        kernel_id=read_complex_kernel();
-    }
+    allocate_work();
 }
 
 void ELPA_Solver::setLoglevel(int loglevel)
@@ -83,15 +76,13 @@ void ELPA_Solver::setLoglevel(int loglevel)
         wantDebug=1;
 }
 
-
-void ELPA_Solver::setKernel(int kernel)
+void ELPA_Solver::setKernel(bool isReal, int kernel)
 {
     this->kernel_id=kernel;
 }
 
-void ELPA_Solver::setKernel(int kernel, int useQR)
+void ELPA_Solver::setQR(int useQR)
 {
-    this->kernel_id=kernel;
     this->useQR=useQR;
 }
 

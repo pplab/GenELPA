@@ -23,7 +23,7 @@ map<int, elpa_t> NEW_ELPA_HANDLE_POOL;
 ELPA_Solver::ELPA_Solver(bool isReal, MPI_Comm comm, int nev,
                          int narows, int nacols, int* desc)
 {
-	this->isReal=isReal;
+    this->isReal=isReal;
     this->comm=comm;
     this->nev=nev;
     this->narows=narows;
@@ -37,7 +37,7 @@ ELPA_Solver::ELPA_Solver(bool isReal, MPI_Comm comm, int nev,
     lda=desc[8];
     MPI_Comm_rank(comm, &myid);
     Cblacs_gridinfo(cblacs_ctxt, &nprows, &npcols, &myprow, &mypcol);
-    allocate_work(isReal);
+    allocate_work();
     if(isReal)
         kernel_id=read_real_kernel();
     else
@@ -73,7 +73,7 @@ ELPA_Solver::ELPA_Solver(bool isReal, MPI_Comm comm, int nev,
 ELPA_Solver::ELPA_Solver(bool isReal, MPI_Comm comm, int nev,
                          int narows, int nacols, int* desc, int* otherParameter)
 {
-	this->isReal=isReal;
+    this->isReal=isReal;
     this->comm=comm;
     this->nev=nev;
     this->narows=narows;
@@ -90,7 +90,7 @@ ELPA_Solver::ELPA_Solver(bool isReal, MPI_Comm comm, int nev,
     lda=desc[8];
     MPI_Comm_rank(comm, &myid);
     Cblacs_gridinfo(cblacs_ctxt, &nprows, &npcols, &myprow, &mypcol);
-    allocate_work(isReal);
+    allocate_work();
 
     int error;
     static map<int, elpa_t> NEW_ELPA_HANDLE_POOL;
@@ -141,9 +141,9 @@ void ELPA_Solver::setKernel(bool isReal, int kernel)
     this->kernel_id=kernel;
     int error;
     if(isReal)
-		elpa_set_integer(NEW_ELPA_HANDLE_POOL[handle_id], "real_kernel", kernel, &error);
-	else
-		elpa_set_integer(NEW_ELPA_HANDLE_POOL[handle_id], "complex_kernel", kernel, &error);
+        elpa_set_integer(NEW_ELPA_HANDLE_POOL[handle_id], "real_kernel", kernel, &error);
+    else
+        elpa_set_integer(NEW_ELPA_HANDLE_POOL[handle_id], "complex_kernel", kernel, &error);
 }
 
 void ELPA_Solver::setQR(int useQR)
@@ -385,7 +385,7 @@ int ELPA_Solver::read_complex_kernel()
     return kernel_id;
 }
 
-int ELPA_Solver::allocate_work(bool isReal)
+int ELPA_Solver::allocate_work()
 {
     unsigned long nloc=narows*nacols; // local size
     unsigned long maxloc; // maximum local size

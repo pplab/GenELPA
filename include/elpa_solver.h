@@ -63,7 +63,7 @@ class ELPA_Solver
     int read_cpuflag();
     int read_real_kernel();
     int read_complex_kernel();
-    int allocate_work(bool isReal);
+    int allocate_work();
     int decomposeRightMatrix(double* B, double* EigenValue, double* EigenVector, int& DecomposedState);
     int decomposeRightMatrix(complex<double>* B, double* EigenValue, complex<double>* EigenVector, int& DecomposedState);
     int composeEigenVector(int DecomposedState, double* B, double* EigenVector);
