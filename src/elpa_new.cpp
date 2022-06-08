@@ -366,7 +366,7 @@ int ELPA_Solver::read_complex_kernel()
         switch (cpuflag)
         {
             case 4:
-                kernel_id=ELPA_2STAGE_COMPLEX_AVX512_BLOCK4;
+                kernel_id=ELPA_2STAGE_COMPLEX_AVX512_BLOCK2;
                 break;
             case 3:
                 kernel_id=ELPA_2STAGE_COMPLEX_AVX2_BLOCK2;
