@@ -14,15 +14,16 @@
 #include "my_math.hpp"
 #include "utils.h"
 
-ELPA_Solver::ELPA_Solver(bool isReal, MPI_Comm comm, int nev,
-                         int narows, int nacols, int* desc)
+ELPA_Solver::ELPA_Solver(const bool isReal, const MPI_Comm comm, const int nev,
+                         const int narows, const int nacols, const int* desc)
 {
 	this->isReal=isReal;
     this->comm=comm;
     this->nev=nev;
     this->narows=narows;
     this->nacols=nacols;
-    this->desc=desc;
+    for(int i=0; i<9; ++i)
+		this->desc[i]=desc[i];
 
     method=0;
     kernel_id=0;
@@ -46,15 +47,16 @@ ELPA_Solver::ELPA_Solver(bool isReal, MPI_Comm comm, int nev,
     MPI_Comm_rank(comm, &myid);
 }
 
-ELPA_Solver::ELPA_Solver(bool isReal, MPI_Comm comm, int nev,
-                         int narows, int nacols, int* desc, int* otherParameter)
+ELPA_Solver::ELPA_Solver(const bool isReal, const MPI_Comm comm, const int nev,
+                         const int narows, const int nacols, const int* desc, const int* otherParameter)
 {
 	this->isReal=isReal;
     this->comm=comm;
     this->nev=nev;
     this->narows=narows;
     this->nacols=nacols;
-    this->desc=desc;
+    for(int i=0; i<9; ++i)
+		this->desc[i]=desc[i];
 
     kernel_id=otherParameter[0];
     useQR=otherParameter[1];
@@ -229,7 +231,7 @@ int ELPA_Solver::read_complex_kernel()
                 kernel_id=ELPA2_COMPLEX_KERNEL_AVX_BLOCK1;
                 break;
             case 1:
-                kernel_id=ELPA_2STAGE_COMPLEX_SSE_ASSEMBLY;
+                kernel_id=ELPA2_COMPLEX_KERNEL_SSE;
                 break;
             default:
                 kernel_id=ELPA2_COMPLEX_KERNEL_GENERIC;

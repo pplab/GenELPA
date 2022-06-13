@@ -20,16 +20,16 @@ using namespace std;
 
 map<int, elpa_t> NEW_ELPA_HANDLE_POOL;
 
-ELPA_Solver::ELPA_Solver(bool isReal, MPI_Comm comm, int nev,
-                         int narows, int nacols, int* desc)
+ELPA_Solver::ELPA_Solver(const bool isReal, const MPI_Comm comm, const int nev,
+                         const int narows, const int nacols, const int* desc)
 {
     this->isReal=isReal;
     this->comm=comm;
     this->nev=nev;
     this->narows=narows;
     this->nacols=nacols;
-    this->desc=desc;
-
+    for(int i=0; i<9; ++i)
+		this->desc[i]=desc[i];
     kernel_id=0;
     cblacs_ctxt=desc[1];
     nFull=desc[2];
@@ -42,7 +42,6 @@ ELPA_Solver::ELPA_Solver(bool isReal, MPI_Comm comm, int nev,
         kernel_id=read_real_kernel();
     else
         kernel_id=read_complex_kernel();
-
     int error;
 
     static int total_handle=0;
@@ -68,17 +67,19 @@ ELPA_Solver::ELPA_Solver(bool isReal, MPI_Comm comm, int nev,
     elpa_set_integer(NEW_ELPA_HANDLE_POOL[handle_id], "solver", ELPA_SOLVER_2STAGE, &error);
     this->setQR(0);
     this->setKernel(isReal, kernel_id);
+    this->loglevel=0; 
 }
 
-ELPA_Solver::ELPA_Solver(bool isReal, MPI_Comm comm, int nev,
-                         int narows, int nacols, int* desc, int* otherParameter)
+ELPA_Solver::ELPA_Solver(const bool isReal, const MPI_Comm comm, const int nev,
+                         const int narows, const int nacols, const int* desc, const int* otherParameter)
 {
     this->isReal=isReal;
     this->comm=comm;
     this->nev=nev;
     this->narows=narows;
     this->nacols=nacols;
-    this->desc=desc;
+    for(int i=0; i<9; ++i)
+		this->desc[i]=desc[i];
 
     kernel_id=otherParameter[0];
     useQR=otherParameter[1];
