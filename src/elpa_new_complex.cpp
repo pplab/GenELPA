@@ -48,26 +48,30 @@ int ELPA_Solver::generalized_eigenvector(complex<double>* A, complex<double>* B,
     int info, allinfo;
     double t;
 
-    if(DecomposedState==0) // B is not decomposed
+    if(loglevel>0 && myid==0)
     {
-        if((loglevel>0 && myid==0) || loglevel>1)
-        {
-            t=-1;
-            timer(myid, "decomposeRightMatrix", "1", t);
-        }
-        if(DecomposedState==0)
-            allinfo=decomposeRightMatrix(B, EigenValue, EigenVector, DecomposedState);
-        else
-            allinfo=0;
-
-        if((loglevel>0 && myid==0) || loglevel>1)
-        {
-            timer(myid, "decomposeRightMatrix", "1", t);
-        }
-
-        if(allinfo != 0)
-            return allinfo;
+        std::stringstream outlog;
+        outlog.str("");
+        outlog<<"DEBUG: Process "<<myid<<" Enter ELPA_Solver::generalized_eigenvector"<<std::endl;
+        std::cout<<outlog.str();
     }
+    
+	if((loglevel>0 && myid==0) || loglevel>1)
+	{
+		t=-1;
+		timer(myid, "decomposeRightMatrix", "1", t);
+	}
+	if(DecomposedState==0) // B is not decomposed
+		allinfo=decomposeRightMatrix(B, EigenValue, EigenVector, DecomposedState);
+	else
+		allinfo=0;
+
+	if((loglevel>0 && myid==0) || loglevel>1)
+	{
+		timer(myid, "decomposeRightMatrix", "1", t);
+	}
+	if(allinfo != 0)
+		return allinfo;
 
     // transform A to A~
     if((loglevel>0 && myid==0) || loglevel>1)
@@ -81,24 +85,24 @@ int ELPA_Solver::generalized_eigenvector(complex<double>* A, complex<double>* B,
         if(loglevel>1)
         {
             t=-1;
-            timer(myid, "A*U^-1", "2", t);
+            timer(myid, "A*U^-1", "2.1", t);
         }
         Cpzgemm('C', 'N', nFull, 1.0, A, B, 0.0, zwork, desc);
         if(loglevel>1)
         {
-            timer(myid, "A*U^-1", "2", t);
+            timer(myid, "A*U^-1", "2.1", t);
         }
 
         // calculate U^-C^(A*U^-1), put to a
         if(loglevel>1)
         {
             t=-1;
-            timer(myid, "U^-T*(A*U^-1)", "3", t);
+            timer(myid, "U^-T*(A*U^-1)", "2.2", t);
         }
         Cpzgemm('C', 'N', nFull, 1.0, B, zwork, 0.0, A, desc);
         if(loglevel>1)
         {
-            timer(myid, "U^-T*(A*U^-1)", "3", t);
+            timer(myid, "U^-T*(A*U^-1)", "2.2", t);
         }
     }
     else
@@ -137,13 +141,17 @@ int ELPA_Solver::generalized_eigenvector(complex<double>* A, complex<double>* B,
         t=-1;
         timer(myid, "elpa_eigenvectors", "3", t);
     }
-    elpa_eigenvectors_all_host_arrays_dc(NEW_ELPA_HANDLE_POOL[handle_id], reinterpret_cast<double _Complex*>(A),
-                         EigenValue, reinterpret_cast<double _Complex*>(EigenVector), &info);
+    if(loglevel>2) saveMatrix("A_tilde.dat", nFull, A, desc, cblacs_ctxt);
+    //elpa_eigenvectors_all_host_arrays_dc(NEW_ELPA_HANDLE_POOL[handle_id], reinterpret_cast<double _Complex*>(A),
+    //                     EigenValue, reinterpret_cast<double _Complex*>(EigenVector), &info);
+    info=eigenvector(A, EigenValue, EigenVector);
     if((loglevel>0 && myid==0) || loglevel>1)
     {
         timer(myid, "elpa_eigenvectors", "3", t);
     }
     MPI_Allreduce(&info, &allinfo, 1, MPI_INT, MPI_MAX, comm);
+    if(loglevel>2) saveMatrix("EigenVector_tilde.dat", nFull, EigenVector, desc, cblacs_ctxt);
+
     if((loglevel>0 && myid==0) || loglevel>1)
     {
         t=-1;
@@ -292,9 +300,7 @@ int ELPA_Solver::decomposeRightMatrix(complex<double>* B, double* EigenValue, co
             t=-1;
             timer(myid, "qevq=qev*q^T", "2", t);
         }
-        Cpzgemm('N', 'C', nFull,
-                1.0, zwork, EigenVector,
-                0.0, B, desc);
+        Cpzgemm('N', 'C', nFull, 1.0, zwork, EigenVector, 0.0, B, desc);
         if(loglevel>1)
         {
             timer(myid, "qevq=qev*q^T", "2", t);
@@ -314,8 +320,7 @@ int ELPA_Solver::composeEigenVector(int DecomposedState, complex<double>* B, com
             t=-1;
             timer(myid, "Cpztrmm", "1", t);
         }
-        Cpztrmm('L', 'U', 'N', 'N', nFull,
-                1.0, B, EigenVector, desc);
+        Cpztrmm('L', 'U', 'N', 'N', nFull, 1.0, B, EigenVector, desc);
         if(loglevel>1)
         {
             timer(myid, "Cpztrmm", "1", t);
@@ -327,9 +332,7 @@ int ELPA_Solver::composeEigenVector(int DecomposedState, complex<double>* B, com
             t=-1;
             timer(myid, "Cpzgemm", "1", t);
         }
-        Cpzgemm('C', 'N', nFull,
-                1.0, B, zwork,
-                0.0, EigenVector, desc);
+        Cpzgemm('C', 'N', nFull, 1.0, B, zwork, 0.0, EigenVector, desc);
         if(loglevel>1)
         {
             timer(myid, "Cpzgemm", "1", t);

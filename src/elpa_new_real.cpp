@@ -65,7 +65,13 @@ int ELPA_Solver::generalized_eigenvector(double* A, double* B, int& DecomposedSt
     }
     if(allinfo != 0)
         return allinfo;
-
+        
+    // transform A to A~
+    if((loglevel>0 && myid==0) || loglevel>1)
+    {
+        t=-1;
+        timer(myid, "transform A to A~", "2", t);
+    }
     if(DecomposedState == 1 || DecomposedState == 2)
     {
         // calculate A*U^-1, put to work
@@ -117,15 +123,13 @@ int ELPA_Solver::generalized_eigenvector(double* A, double* B, int& DecomposedSt
             timer(myid, "B*work^T = B*(B*A^T)^T", "3", t);
         }
     }
-
-    if(loglevel>0 && myid==0)
+    if((loglevel>0 && myid==0) || loglevel>1)
     {
-        /*const int naloc=narows*nacols;
-        Cdcopy(naloc, A, dwork);
-        for(int i=0; i<naloc; ++i)
-            EigenVector[i]=0;
-        for(int i=0; i<nFull; ++i)
-            EigenValue[i]=0;*/
+        timer(myid, "transform A to A~", "2", t);
+    }
+
+    if((loglevel>0 && myid==0) || loglevel>1)
+    {
         t=-1;
         timer(myid, "elpa_eigenvectors", "2", t);
     }
@@ -133,19 +137,19 @@ int ELPA_Solver::generalized_eigenvector(double* A, double* B, int& DecomposedSt
     //elpa_eigenvectors_all_host_arrays_d(NEW_ELPA_HANDLE_POOL[handle_id], A, EigenValue, EigenVector, &info);
     info=eigenvector(A, EigenValue, EigenVector);
 
-    if(loglevel>0 && myid==0)
+    if((loglevel>0 && myid==0) || loglevel>1)
     {
         timer(myid, "elpa_eigenvectors", "2", t);
     }
 
     MPI_Allreduce(&info, &allinfo, 1, MPI_INT, MPI_MAX, comm);
+    if(loglevel>2) saveMatrix("EigenVector_tilde.dat", nFull, EigenVector, desc, cblacs_ctxt);
+    
     if(loglevel>0 && myid==0)
     {
         t=-1;
         timer(myid, "composeEigenVector", "3", t);
     }
-
-    if(loglevel>2) saveMatrix("EigenVector_tilde.dat", nFull, EigenVector, desc, cblacs_ctxt);
     allinfo=composeEigenVector(DecomposedState, B, EigenVector);
     if(loglevel>0 && myid==0)
     {
