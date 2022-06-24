@@ -6,9 +6,6 @@
 #include <cstring>
 #include <mpi.h>
 
-#include <iostream>
-#include <sstream>
-
 #include "elpa_new.h"
 #include "elpa_solver.h"
 
@@ -48,30 +45,22 @@ int ELPA_Solver::generalized_eigenvector(complex<double>* A, complex<double>* B,
     int info, allinfo;
     double t;
 
-    if(loglevel>0 && myid==0)
+    if((loglevel>0 && myid==0) || loglevel>1)
     {
-        std::stringstream outlog;
-        outlog.str("");
-        outlog<<"DEBUG: Process "<<myid<<" Enter ELPA_Solver::generalized_eigenvector"<<std::endl;
-        std::cout<<outlog.str();
+        t=-1;
+        timer(myid, "decomposeRightMatrix", "1", t);
     }
-    
-	if((loglevel>0 && myid==0) || loglevel>1)
-	{
-		t=-1;
-		timer(myid, "decomposeRightMatrix", "1", t);
-	}
-	if(DecomposedState==0) // B is not decomposed
-		allinfo=decomposeRightMatrix(B, EigenValue, EigenVector, DecomposedState);
-	else
-		allinfo=0;
+    if(DecomposedState==0) // B is not decomposed
+        allinfo=decomposeRightMatrix(B, EigenValue, EigenVector, DecomposedState);
+    else
+        allinfo=0;
 
-	if((loglevel>0 && myid==0) || loglevel>1)
-	{
-		timer(myid, "decomposeRightMatrix", "1", t);
-	}
-	if(allinfo != 0)
-		return allinfo;
+    if((loglevel>0 && myid==0) || loglevel>1)
+    {
+        timer(myid, "decomposeRightMatrix", "1", t);
+    }
+    if(allinfo != 0)
+        return allinfo;
 
     // transform A to A~
     if((loglevel>0 && myid==0) || loglevel>1)
@@ -85,24 +74,24 @@ int ELPA_Solver::generalized_eigenvector(complex<double>* A, complex<double>* B,
         if(loglevel>1)
         {
             t=-1;
-            timer(myid, "A*U^-1", "2.1", t);
+            timer(myid, "A*U^-1", "2.1a", t);
         }
-        Cpzgemm('C', 'N', nFull, 1.0, A, B, 0.0, zwork, desc);
+        Cpzgemm('C', 'N', nFull, 1.0, A, B, 0.0, zwork.data(), desc);
         if(loglevel>1)
         {
-            timer(myid, "A*U^-1", "2.1", t);
+            timer(myid, "A*U^-1", "2.1a", t);
         }
 
         // calculate U^-C^(A*U^-1), put to a
         if(loglevel>1)
         {
             t=-1;
-            timer(myid, "U^-T*(A*U^-1)", "2.2", t);
+            timer(myid, "U^-T*(A*U^-1)", "2.2a", t);
         }
-        Cpzgemm('C', 'N', nFull, 1.0, B, zwork, 0.0, A, desc);
+        Cpzgemm('C', 'N', nFull, 1.0, B, zwork.data(), 0.0, A, desc);
         if(loglevel>1)
         {
-            timer(myid, "U^-T*(A*U^-1)", "2.2", t);
+            timer(myid, "U^-T*(A*U^-1)", "2.2a", t);
         }
     }
     else
@@ -111,23 +100,23 @@ int ELPA_Solver::generalized_eigenvector(complex<double>* A, complex<double>* B,
         if(loglevel>1)
         {
             t=-1;
-            timer(myid, "B*A^T", "2", t);
+            timer(myid, "B*A^T", "2.1b", t);
         }
-        Cpzgemm('N', 'C', nFull, 1.0, B, A, 0.0, zwork, desc);
+        Cpzgemm('N', 'C', nFull, 1.0, B, A, 0.0, zwork.data(), desc);
         if(loglevel>1)
         {
-            timer(myid, "B*A^T", "2", t);
+            timer(myid, "B*A^T", "2.1b", t);
         }
         // calculate b*work^C and put to a -- original A*x=v*B*x was transform to a*x'=v*x'
         if(loglevel>1)
         {
             t=-1;
-            timer(myid, "B*(B*A^T)^T", "3", t);
+            timer(myid, "B*(B*A^T)^T", "2.2b", t);
         }
-        Cpzgemm('N', 'C', nFull, 1.0, B, zwork, 0.0, A, desc);
+        Cpzgemm('N', 'C', nFull, 1.0, B, zwork.data(), 0.0, A, desc);
         if(loglevel>1)
         {
-            timer(myid, "B*(B*A^T)^T", "3", t);
+            timer(myid, "B*(B*A^T)^T", "2.2b", t);
         }
     }
     if((loglevel>0 && myid==0) || loglevel>1)
@@ -300,7 +289,7 @@ int ELPA_Solver::decomposeRightMatrix(complex<double>* B, double* EigenValue, co
             t=-1;
             timer(myid, "qevq=qev*q^T", "2", t);
         }
-        Cpzgemm('N', 'C', nFull, 1.0, zwork, EigenVector, 0.0, B, desc);
+        Cpzgemm('N', 'C', nFull, 1.0, zwork.data(), EigenVector, 0.0, B, desc);
         if(loglevel>1)
         {
             timer(myid, "qevq=qev*q^T", "2", t);
@@ -320,7 +309,7 @@ int ELPA_Solver::composeEigenVector(int DecomposedState, complex<double>* B, com
             t=-1;
             timer(myid, "Cpztrmm", "1", t);
         }
-        Cpztrmm('L', 'U', 'N', 'N', nFull, 1.0, B, EigenVector, desc);
+        Cpztrmm('L', 'U', 'N', 'N', nFull, nev, 1.0, B, EigenVector, desc);
         if(loglevel>1)
         {
             timer(myid, "Cpztrmm", "1", t);
@@ -332,7 +321,7 @@ int ELPA_Solver::composeEigenVector(int DecomposedState, complex<double>* B, com
             t=-1;
             timer(myid, "Cpzgemm", "1", t);
         }
-        Cpzgemm('C', 'N', nFull, 1.0, B, zwork, 0.0, EigenVector, desc);
+        Cpzgemm('C', 'N', nFull, nev, nFull, 1.0, B, zwork.data(), 0.0, EigenVector, desc);
         if(loglevel>1)
         {
             timer(myid, "Cpzgemm", "1", t);
@@ -355,7 +344,7 @@ void ELPA_Solver::verify(complex<double>* A, double* EigenValue, complex<double>
     complex<double>* V=EigenVector;
     const int naloc=narows*nacols;
     complex<double>* D=new complex<double>[naloc];
-    complex<double>* R=zwork;
+    complex<double>* R=zwork.data();
 
     for(int i=0; i<naloc; ++i)
         D[i]=0;
@@ -386,7 +375,7 @@ void ELPA_Solver::verify(complex<double>* A, double* EigenValue, complex<double>
     // calculate the maximum and mean value of sum_i{R(:,i)*R(:,i)}
     double sumError=0;
     maxError=0;
-    for(int i=1; i<=nFull; ++i)
+    for(int i=1; i<=nev; ++i)
     {
         complex<double> E;
         Cpzdotc(nFull, E, R, 1, i, 1,
@@ -437,10 +426,10 @@ void ELPA_Solver::verify(complex<double>* A, complex<double>* B,
     }
 
     // zwork=B*V
-    Cpzhemm('L', 'U', nFull, 1.0, B, V, 0.0, zwork, desc);
-    if(loglevel>2) saveMatrix("BV.dat", nFull, zwork, desc, cblacs_ctxt);
+    Cpzhemm('L', 'U', nFull, 1.0, B, V, 0.0, zwork.data(), desc);
+    if(loglevel>2) saveMatrix("BV.dat", nFull, zwork.data(), desc, cblacs_ctxt);
     // R=B*V*D=zwork*D
-    Cpzhemm('R', 'U', nFull, 1.0, D, zwork, 0.0, R, desc);
+    Cpzhemm('R', 'U', nFull, 1.0, D, zwork.data(), 0.0, R, desc);
     if(loglevel>2) saveMatrix("BVD.dat", nFull, R, desc, cblacs_ctxt);
     // R=A*V-B*V*D=A*V-R
     Cpzhemm('L', 'U', nFull, 1.0, A, V, -1.0, R, desc);
@@ -448,7 +437,7 @@ void ELPA_Solver::verify(complex<double>* A, complex<double>* B,
     // calculate the maximum and mean value of sum_i{R(:,i)*R(:,i)}
     double sumError=0;
     maxError=0;
-    for(int i=1; i<=nFull; ++i)
+    for(int i=1; i<=nev; ++i)
     {
         complex<double> E;
         Cpzdotc(nFull, E, R, 1, i, 1,

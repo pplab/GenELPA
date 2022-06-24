@@ -1,4 +1,6 @@
 #include <complex>
+
+#include <vector>
 #include <regex>
 #include <fstream>
 #include <cfloat>
@@ -14,16 +16,18 @@
 #include "my_math.hpp"
 #include "utils.h"
 
+using namespace std;
+
 ELPA_Solver::ELPA_Solver(const bool isReal, const MPI_Comm comm, const int nev,
                          const int narows, const int nacols, const int* desc)
 {
-	this->isReal=isReal;
+    this->isReal=isReal;
     this->comm=comm;
     this->nev=nev;
     this->narows=narows;
     this->nacols=nacols;
     for(int i=0; i<9; ++i)
-		this->desc[i]=desc[i];
+        this->desc[i]=desc[i];
 
     method=0;
     kernel_id=0;
@@ -45,18 +49,21 @@ ELPA_Solver::ELPA_Solver(const bool isReal, const MPI_Comm comm, const int nev,
         kernel_id=read_complex_kernel();
     }
     MPI_Comm_rank(comm, &myid);
+    this->setQR(0);
+    this->setKernel(isReal, kernel_id);
+    this->setLoglevel(0);
 }
 
 ELPA_Solver::ELPA_Solver(const bool isReal, const MPI_Comm comm, const int nev,
                          const int narows, const int nacols, const int* desc, const int* otherParameter)
 {
-	this->isReal=isReal;
+    this->isReal=isReal;
     this->comm=comm;
     this->nev=nev;
     this->narows=narows;
     this->nacols=nacols;
     for(int i=0; i<9; ++i)
-		this->desc[i]=desc[i];
+        this->desc[i]=desc[i];
 
     kernel_id=otherParameter[0];
     useQR=otherParameter[1];
@@ -69,13 +76,32 @@ ELPA_Solver::ELPA_Solver(const bool isReal, const MPI_Comm comm, const int nev,
     comm_f=MPI_Comm_c2f(comm);
     elpa_get_communicators(comm_f, myprow, mypcol, &mpi_comm_rows, &mpi_comm_cols);
     allocate_work();
+    this->setQR(useQR);
+    this->setKernel(isReal, kernel_id);
 }
 
 void ELPA_Solver::setLoglevel(int loglevel)
 {
     this->loglevel=loglevel;
+    static bool isLogfileInited=false;
+
     if(loglevel>=2)
+    {
         wantDebug=1;
+        if(! isLogfileInited)
+        {
+            stringstream logfilename;
+            logfilename.str("");
+            logfilename<<"GenELPA_"<<myid<<".log";
+            logfile.open(logfilename.str());
+            logfile<<"logfile inited\n";
+            isLogfileInited=true;
+        }
+    }
+    else
+    {
+        wantDebug=0;
+    }
 }
 
 void ELPA_Solver::setKernel(bool isReal, int kernel)
@@ -90,8 +116,8 @@ void ELPA_Solver::setQR(int useQR)
 
 void ELPA_Solver::exit()
 {
-    delete[] dwork;
-    delete[] zwork;
+    //delete[] dwork;
+    //delete[] zwork;
 }
 
 int ELPA_Solver::read_cpuflag()
@@ -247,53 +273,42 @@ int ELPA_Solver::allocate_work()
     unsigned long maxloc; // maximum local size
     MPI_Allreduce(&nloc, &maxloc, 1, MPI_UNSIGNED_LONG, MPI_MAX, comm);
     if(isReal)
-        dwork=new double[maxloc];
+        dwork.resize(maxloc);
     else
-        zwork=new complex<double>[maxloc];
-    if(dwork||zwork)
-        return 0;
-    else
-        return 1;
+        zwork.resize(maxloc);
+    return 0;
 }
 
 void ELPA_Solver::timer(int myid, const char function[], const char step[], double &t0)
 {
     double t1;
-    stringstream outlog;
     if(t0<0)  // t0 < 0 means this is the init call before the function
     {
         t0=MPI_Wtime();
-        outlog.str("");
-        outlog<<"DEBUG: Process "<<myid<<" Call "<<function<<endl;
-        cout<<outlog.str();
+        logfile<<"DEBUG: Process "<<myid<<" Call "<<function<<endl;
     }
     else {
         t1=MPI_Wtime();
-        outlog.str("");
-        outlog<<"DEBUG: Process "<<myid<<" Step "
+        logfile<<"DEBUG: Process "<<myid<<" Step "
               <<step<<" "<<function<<" time: "<<t1-t0<<" s"<<endl;
-        cout<<outlog.str();
     }
 }
 
 void ELPA_Solver::outputParameters()
 {
-    stringstream outlog;
-    outlog.str("");
-    outlog<<"myid "<<myid<<": comm id(in FORTRAN):"<<MPI_Comm_c2f(comm)<<endl;
-    outlog<<"myid "<<myid<<": nprows: "<<nprows<<" npcols: "<<npcols<<endl;
-    outlog<<"myid "<<myid<<": myprow: "<<myprow<<" mypcol: "<<mypcol<<endl;
-    outlog<<"myid "<<myid<<": nFull: "<<nFull<<" nev: "<<nev<<endl;
-    outlog<<"myid "<<myid<<": narows: "<<narows<<" nacols: "<<nacols<<endl;
-    outlog<<"myid "<<myid<<": blacs parameters setting"<<endl;
-    outlog<<"myid "<<myid<<": blacs ctxt:"<<cblacs_ctxt<<endl;
-    outlog<<"myid "<<myid<<": desc: ";
-    for(int i=0; i<9; ++i) outlog<<desc[i]<<" ";
-    outlog<<endl;
-    outlog<<"myid "<<myid<<": nblk: "<<nblk<<" lda: "<<lda<<endl;
-    outlog<<"myid "<<myid<<": useQR: "<<useQR<<" kernel:"<<kernel_id<<endl;;
-    outlog<<"myid "<<myid<<": wantDebug: "<<wantDebug<<" loglevel: "<<loglevel<<endl;
-    outlog<<"myid "<<myid<<": comm_f: "<<comm_f<<" mpi_comm_rows: "<<mpi_comm_rows
+    logfile<<"myid "<<myid<<": comm id(in FORTRAN):"<<MPI_Comm_c2f(comm)<<endl;
+    logfile<<"myid "<<myid<<": nprows: "<<nprows<<" npcols: "<<npcols<<endl;
+    logfile<<"myid "<<myid<<": myprow: "<<myprow<<" mypcol: "<<mypcol<<endl;
+    logfile<<"myid "<<myid<<": nFull: "<<nFull<<" nev: "<<nev<<endl;
+    logfile<<"myid "<<myid<<": narows: "<<narows<<" nacols: "<<nacols<<endl;
+    logfile<<"myid "<<myid<<": blacs parameters setting"<<endl;
+    logfile<<"myid "<<myid<<": blacs ctxt:"<<cblacs_ctxt<<endl;
+    logfile<<"myid "<<myid<<": desc: ";
+    for(int i=0; i<9; ++i) logfile<<desc[i]<<" ";
+    logfile<<endl;
+    logfile<<"myid "<<myid<<": nblk: "<<nblk<<" lda: "<<lda<<endl;
+    logfile<<"myid "<<myid<<": useQR: "<<useQR<<" kernel:"<<kernel_id<<endl;;
+    logfile<<"myid "<<myid<<": wantDebug: "<<wantDebug<<" loglevel: "<<loglevel<<endl;
+    logfile<<"myid "<<myid<<": comm_f: "<<comm_f<<" mpi_comm_rows: "<<mpi_comm_rows
           <<" mpi_comm_cols: "<<mpi_comm_cols<<endl;
-    cout<<outlog.str();
 }

@@ -10,17 +10,11 @@ INCLUDE_legacy=-I/home/nic/yshen/program/elpa/2016.05.004/include/elpa-2016.05.0
 INCLUDE_new=-I/home/nic/yshen/program/elpa/2021.11.002-A100/include/elpa-2021.11.002
 INCLUDE=-Iinclude -I${MKLROOT}/include
 
-bin/test_multi_elpa_handle_double: test_multi_elpa_handle_double.o lib/libelpa_new.a
-	${MPICXX} test_multi_elpa_handle_double.o ${FLAGS} ${LIBS_new} ${LIBS} -o bin/test_multi_elpa_handle_double
+bin/test_multi_elpa_handle: test_multi_elpa_handle.o lib/libelpa_new.a
+	${MPICXX} test_multi_elpa_handle.o ${FLAGS} ${LIBS_new} ${LIBS} -o bin/test_multi_elpa_handle
 
 test_multi_elpa_handle.o: src/test_multi_elpa_handle.cpp
 	${MPICXX} ${FLAGS} ${INCLUDE} -c src/test_multi_elpa_handle.cpp
-
-bin/test_multi_elpa_handle_complex: test_multi_elpa_handle_complex.o lib/libelpa_new.a
-	${MPICXX} test_multi_elpa_handle_complex.o ${FLAGS} ${LIBS_new} ${LIBS} -o bin/test_multi_elpa_handle_complex
-
-test_multi_elpa_handle_complex.o: src/test_multi_elpa_handle_complex.cpp
-	${MPICXX} ${FLAGS} ${INCLUDE} -c src/test_multi_elpa_handle_complex.cpp
 
 bin/benchmark_double_new: benchmark_double.o lib/libelpa_new.a
 	${MPICXX} benchmark_double.o ${FLAGS} ${LIBS_new} ${LIBS} -o bin/benchmark_double_new
