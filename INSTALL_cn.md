@@ -1,6 +1,6 @@
 # GenELPA安装说明
 
-GenELPA需要与ELPA本身一起使用。它可以兼容新旧两种API的ELPA，安装时可以只选择其中一种ELPA安装，也可以安装两种都安装。
+GenELPA需要与ELPA本身一起使用。它可以兼容新旧两种API的ELPA，安装时可以只选择其中一种ELPA安装，也可以两种都安装。
 
 GenELPA和ELPA一样需要依赖BLAS和ScaLAPACK库，编译器需要支持c++11标准。
 
