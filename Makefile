@@ -1,4 +1,4 @@
-# for taishan nodes of hanhai20
+# use static lib for hanhai20
 MPICXX=mpiicpc
 
 FLAGS=-Wall -mtune=native -march=native -Ofast -std=c++11 
