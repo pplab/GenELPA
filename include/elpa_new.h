@@ -21,8 +21,11 @@ typedef struct elpa_autotune_struct *elpa_autotune_t;
 // for compatiability.
 #define complex _Complex
 #include <elpa/elpa_generated.h>
-#undef complex
 //#include <elpa/elpa_generic.h>
 
 const char *elpa_strerr(int elpa_error);
 }
+
+#define complex _Complex
+#include "my_elpa_generic.hpp"
+#undef complex

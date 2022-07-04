@@ -25,7 +25,7 @@ int ELPA_Solver::eigenvector(double* A, double* EigenValue, double* EigenVector)
         t=-1;
         timer(myid, "elpa_eigenvectors_all_host_arrays_d", "1", t);
     }
-    elpa_eigenvectors_all_host_arrays_d(NEW_ELPA_HANDLE_POOL[handle_id], A, EigenValue, EigenVector, &info);
+    elpa_eigenvectors(NEW_ELPA_HANDLE_POOL[handle_id], A, EigenValue, EigenVector, &info);
     if(loglevel>0 && myid==0)
     {
         timer(myid, "elpa_eigenvectors_all_host_arrays_d", "1", t);
@@ -123,7 +123,6 @@ int ELPA_Solver::generalized_eigenvector(double* A, double* B, int& DecomposedSt
         timer(myid, "elpa_eigenvectors", "2", t);
     }
     if(loglevel>2) saveMatrix("A_tilde.dat", nFull, A, desc, cblacs_ctxt);
-    //elpa_eigenvectors_all_host_arrays_d(NEW_ELPA_HANDLE_POOL[handle_id], A, EigenValue, EigenVector, &info);
     info=eigenvector(A, EigenValue, EigenVector);
 
     if((loglevel>0 && myid==0) || loglevel>1)
@@ -270,7 +269,8 @@ int ELPA_Solver::decomposeRightMatrix(double* B, double* EigenValue, double* Eig
             t=-1;
             timer(myid, "calculate eigenvalue and eigenvector of B", "1", t);
         }
-        elpa_eigenvectors_all_host_arrays_d(NEW_ELPA_HANDLE_POOL[handle_id], B, EigenValue, EigenVector, &info);
+        //elpa_eigenvectors_all_host_arrays_d(NEW_ELPA_HANDLE_POOL[handle_id], B, EigenValue, EigenVector, &info);
+        info=eigenvector(B, EigenValue, EigenVector);
         if(loglevel>1)
         {
             timer(myid, "calculate eigenvalue and eigenvector of B", "1", t);

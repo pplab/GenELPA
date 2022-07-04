@@ -25,15 +25,15 @@ int ELPA_Solver::eigenvector(complex<double>* A, double* EigenValue, complex<dou
     if((loglevel>0 && myid==0) || loglevel>1)
     {
         t=-1;
-        timer(myid, "elpa_eigenvectors_all_host_arrays_dc", "1", t);
+        timer(myid, "elpa_eigenvectors_dc", "1", t);
     }
-    elpa_eigenvectors_all_host_arrays_dc(NEW_ELPA_HANDLE_POOL[handle_id],
+    elpa_eigenvectors(NEW_ELPA_HANDLE_POOL[handle_id],
                                         reinterpret_cast<double _Complex*>(A),
                 EigenValue, reinterpret_cast<double _Complex*>(EigenVector),
                                         &info);
     if((loglevel>0 && myid==0) || loglevel>1)
     {
-        timer(myid, "elpa_eigenvectors_all_host_arrays_dc", "1", t);
+        timer(myid, "elpa_eigenvectors_dc", "1", t);
     }
     MPI_Allreduce(&info, &allinfo, 1, MPI_INT, MPI_MAX, comm);
     return allinfo;
@@ -266,8 +266,9 @@ int ELPA_Solver::decomposeRightMatrix(complex<double>* B, double* EigenValue, co
             t=-1;
             timer(myid, "calculate eigenvalue and eigenvector of B", "1", t);
         }
-        elpa_eigenvectors_all_host_arrays_dc(NEW_ELPA_HANDLE_POOL[handle_id], b,
-                             EigenValue, q, &info);
+        //elpa_eigenvectors_all_host_arrays_dc(NEW_ELPA_HANDLE_POOL[handle_id], b,
+        //                     EigenValue, q, &info);
+		info=eigenvector(B, EigenValue, EigenVector);
         if(loglevel>1)
         {
             timer(myid, "calculate eigenvalue and eigenvector of B", "1", t);
